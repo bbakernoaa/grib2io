@@ -28,10 +28,11 @@ jobs:
         env:
           CIBW_BUILD: cp311-* cp312-* cp313-* cp314-*
           CIBW_ARCHS_LINUX: x86_64
-          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_MACOS: auto
 
           # Linux Configuration
           CIBW_BEFORE_ALL_LINUX: >
+            yum install -y epel-release &&
             yum install -y wget zlib-devel libpng-devel openjpeg2-devel libaec-devel openblas-devel lapack-devel &&
             wget https://github.com/NOAA-EMC/NCEPLIBS-g2c/archive/refs/tags/v1.8.0.tar.gz &&
             tar -xzf v1.8.0.tar.gz &&
@@ -55,7 +56,8 @@ jobs:
 
           # macOS Configuration
           CIBW_BEFORE_ALL_MACOS: >
-            brew install cmake gcc libpng openjpeg libaec openblas &&
+            brew install cmake gcc libpng openjpeg libaec openblas pkg-config &&
+            export CMAKE_PREFIX_PATH=$(brew --prefix openblas):$(brew --prefix) &&
             curl -L -o v1.8.0.tar.gz https://github.com/NOAA-EMC/NCEPLIBS-g2c/archive/refs/tags/v1.8.0.tar.gz &&
             tar -xzf v1.8.0.tar.gz &&
             cd NCEPLIBS-g2c-1.8.0 &&
@@ -74,8 +76,6 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: >
             G2C_DIR=/usr/local
             IP_DIR=/usr/local
-            CC=gcc-14
-            CXX=g++-14
             FC=gfortran-14
 
       - uses: actions/upload-artifact@v4
