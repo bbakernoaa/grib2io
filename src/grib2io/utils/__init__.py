@@ -11,7 +11,10 @@ from typing import Dict, List, Optional, Tuple, Type, Union
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .. import iplib
+try:
+    from .. import iplib
+except ImportError:
+    iplib = None
 from .. import tables
 from .. import templates
 
@@ -345,6 +348,8 @@ def latlon_to_ij(
         raise ValueError("Longitudes must be a list or 1-D NumPy array.")
     if nlats != nlons:
         raise ValueError("Latitudes and longitudes same length.")
+    if iplib is None:
+        raise ImportError("iplib module not available. Install grib2io with interpolation support to use this function.")
     return iplib.latlon_to_ij(
         gdtn.astype(np.int32),
         gdt.astype(np.int32),

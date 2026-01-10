@@ -1,6 +1,2 @@
-cython
-dask
 numpy
 pyproj
-pytest
-xarray

@@ -393,6 +393,10 @@ pkginfo = get_package_info('ip', incdir="include_4", static=ip_static, required=
 if None in pkginfo:
     warnings.warn(f"NCEPLIBS-ip not found or missing information. grib2io will build without interpolation.")
     build_with_ip = False
+else:
+    # Disable ip library for now to avoid OpenMP issues
+    build_with_ip = False
+    warnings.warn(f"NCEPLIBS-ip found but disabled to avoid OpenMP issues. grib2io will build without interpolation.")
 
 if build_with_ip:
 
@@ -404,7 +408,9 @@ if build_with_ip:
         incdirs=[pkginfo[1]],
         libdirs=[pkginfo[2]],
         extra_objects=[],
-        define_macros=[]
+        define_macros=[],
+        extra_compile_args=[],
+        extra_link_args=[]
     )
 
     # Find the full path to the ip library.
@@ -428,7 +434,12 @@ if build_with_ip:
 
     # At this point, we know where to find ip and how we are linking. Now check
     # if ip was built with OpenMP support.
-    build_with_openmp, openmp_libname, ftn_libname = check_ip_for_openmp(ip_libname, static=False)
+    if sys.platform != 'darwin':
+        build_with_openmp, openmp_libname, ftn_libname = check_ip_for_openmp(ip_libname, static=False)
+    else:
+        build_with_openmp = False
+        openmp_libname = None
+        ftn_libname = None
 
     if build_with_openmp:
 
@@ -444,11 +455,15 @@ if build_with_ip:
                 else:
                     print(f"NCEPLIBS-ip is from Homebrew. grib2io will use compiler from Homebrew: {ccomp}")
                     os.environ['CC'] = ccomp
-        
+
         # Note that both GNU and Intel support this flag.
         extmod_config['iplib']['define_macros'].append(('IPLIB_WITH_OPENMP', None))
-        extmod_config['iplib']['extra_compile_args'] = ['-fopenmp']
-        extmod_config['iplib']['extra_link_args'] = ['-fopenmp']
+        if sys.platform != 'darwin':
+            extmod_config['iplib']['extra_compile_args'] = ['-fopenmp']
+            extmod_config['iplib']['extra_link_args'] = ['-fopenmp']
+    else:
+        # Ensure that IPLIB_WITH_OPENMP is not defined
+        extmod_config['iplib']['define_macros'] = []
 
     # Further modifications if linking statically to ip.
     if ip_static:
@@ -553,4 +568,11 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 setup(ext_modules = extension_modules,
       cmdclass = cmdclass,
       long_description = long_description,
-      long_description_content_type = 'text/markdown')
+      long_description_content_type = 'text/markdown',
+      install_requires=[
+          'numpy',
+          'pyproj',
+      ],
+      extras_require={
+          'xarray': ['xarray'],
+      })

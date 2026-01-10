@@ -7,8 +7,10 @@ IMPORTANT: Make changes to this file, not the C code that Cython generates.
 """
 
 import cython
+#ifdef IPLIB_WITH_OPENMP
 from cython.parallel import parallel, prange
 from cython.cimports.openmp import omp_get_max_threads, omp_get_num_threads, omp_set_num_threads
+#endif
 
 from libc.stdint cimport uint8_t, int32_t
 from libc.stdlib cimport malloc, free
