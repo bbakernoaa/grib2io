@@ -2,3 +2,4 @@ numpy
 pyproj
 pytest
 xarray
+dask
