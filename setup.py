@@ -398,15 +398,16 @@ extmod_config['g2clib']['incdirs'].append(numpy.get_include())
 ip_static = check_lib_static('ip')
 pkginfo = get_package_info('ip', incdir="include_4", static=ip_static, required=False, include_file="iplib.h")
 
-if None in pkginfo:
-    warnings.warn(f"NCEPLIBS-ip not found or missing information. grib2io will build without interpolation.")
-    build_with_ip = False
+if os.environ.get('GRIB2IO_WITH_IP') == 'True':
+    if None in pkginfo:
+        raise RuntimeError(f"NCEPLIBS-ip not found or missing information, but GRIB2IO_WITH_IP='True' was requested.")
+    build_with_ip = True
 else:
-    if os.environ.get('GRIB2IO_WITH_IP') == 'True':
-        build_with_ip = True
+    if None in pkginfo:
+        warnings.warn(f"NCEPLIBS-ip not found or missing information. grib2io will build without interpolation.")
     else:
-        build_with_ip = False
         warnings.warn(f"NCEPLIBS-ip found but disabled to avoid OpenMP issues. grib2io will build without interpolation. Set GRIB2IO_WITH_IP='True' to build with interpolation.")
+    build_with_ip = False
 
 if build_with_ip:
 

@@ -216,6 +216,7 @@ class open():
             self.size = len(filename)
             self._fileid = hashlib.sha1((self.name+str(self.size)).encode('ASCII')).hexdigest()
             self._index = build_index(self._filehandle)
+            self._hasindex = True
             self._msgs = msgs_from_index(self._index, filehandle=self._filehandle)
             self.messages = len(self._msgs)
 
@@ -233,6 +234,7 @@ class open():
             if 'r' in self.mode:
                 # Build index from the file-like object
                 self._index = build_index(self._filehandle)
+                self._hasindex = True
                 self._msgs = msgs_from_index(self._index, filehandle=self._filehandle)
                 self.messages = len(self._msgs)
 
@@ -271,7 +273,6 @@ class open():
                         warnings.warn(f"found indexfile: {self.indexfile}, but unable to load it: {e}\n"
                                       f"re-forming index from grib2file, but not writing indexfile")
                         self._index = build_index(self._filehandle)
-                    self._hasindex = True
                 else:
                     self._index = build_index(self._filehandle)
                     if self.save_index:
@@ -280,6 +281,7 @@ class open():
                         except Exception as e:
                             warnings.warn(f"index was not serialized for future use: {e}")
 
+                self._hasindex = True
                 self._msgs = msgs_from_index(self._index, filehandle=self._filehandle)
 
                 self.messages = len(self._msgs)

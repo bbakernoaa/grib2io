@@ -14,6 +14,12 @@ try:
     g2c_static = __config__.g2c_static
     ip_static = __config__.ip_static
     extra_objects = __config__.extra_objects
+    if has_interpolation:
+        try:
+            from . import iplib
+            __all__.append('iplib')
+        except ImportError:
+            has_interpolation = False
 except(ImportError):
     pass
 
