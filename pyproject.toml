@@ -19,9 +19,9 @@ keywords = [
   "grib2", "grib2-decoder", "grib2-encoder", "ncep",
 ]
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = {text = "MIT"}
 classifiers = [
+  "License :: OSI Approved :: MIT License",
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
   "Programming Language :: Cython",
