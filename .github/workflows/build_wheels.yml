@@ -1,0 +1,99 @@
+name: Build Wheels
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - master
+      - main
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-13, macos-14, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_BUILD: cp311-* cp312-* cp313-* cp314-*
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_MACOS: auto
+
+          # Linux Configuration
+          CIBW_BEFORE_ALL_LINUX: >
+            yum install -y epel-release &&
+            yum install -y wget zlib-devel libpng-devel openjpeg2-devel libaec-devel openblas-devel lapack-devel &&
+            wget https://github.com/NOAA-EMC/NCEPLIBS-g2c/archive/refs/tags/v1.8.0.tar.gz &&
+            tar -xzf v1.8.0.tar.gz &&
+            cd NCEPLIBS-g2c-1.8.0 &&
+            mkdir build && cd build &&
+            cmake -DUSE_Jasper=OFF -DUSE_OpenJPEG=ON -DBUILD_PNG=ON -DBUILD_AEC=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. &&
+            make -j2 &&
+            make install &&
+            cd ../.. &&
+            wget https://github.com/NOAA-EMC/NCEPLIBS-ip/archive/refs/tags/v5.1.0.tar.gz &&
+            tar -xzf v5.1.0.tar.gz &&
+            cd NCEPLIBS-ip-5.1.0 &&
+            mkdir build && cd build &&
+            cmake -DOPENMP=ON -DBUILD_SHARED_LIBS=ON -DBLA_VENDOR=OpenBLAS -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. &&
+            make -j2 &&
+            make install
+          CIBW_ENVIRONMENT_LINUX: >
+            G2C_DIR=/usr/local
+            IP_DIR=/usr/local
+            GRIB2IO_WITH_IP=True
+            LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+          # macOS Configuration
+          CIBW_BEFORE_ALL_MACOS: >
+            brew install cmake gcc libpng openjpeg libaec openblas pkg-config &&
+            export CMAKE_PREFIX_PATH=$(brew --prefix openblas):$(brew --prefix) &&
+            curl -L -o v1.8.0.tar.gz https://github.com/NOAA-EMC/NCEPLIBS-g2c/archive/refs/tags/v1.8.0.tar.gz &&
+            tar -xzf v1.8.0.tar.gz &&
+            cd NCEPLIBS-g2c-1.8.0 &&
+            mkdir build && cd build &&
+            cmake -DUSE_Jasper=OFF -DUSE_OpenJPEG=ON -DBUILD_PNG=ON -DBUILD_AEC=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. &&
+            make -j2 &&
+            sudo make install &&
+            cd ../.. &&
+            curl -L -o v5.1.0.tar.gz https://github.com/NOAA-EMC/NCEPLIBS-ip/archive/refs/tags/v5.1.0.tar.gz &&
+            tar -xzf v5.1.0.tar.gz &&
+            cd NCEPLIBS-ip-5.1.0 &&
+            mkdir build && cd build &&
+            cmake -DOPENMP=ON -DBUILD_SHARED_LIBS=ON -DBLA_VENDOR=OpenBLAS -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. &&
+            make -j2 &&
+            sudo make install
+          CIBW_ENVIRONMENT_MACOS: >
+            G2C_DIR=/usr/local
+            IP_DIR=/usr/local
+            GRIB2IO_WITH_IP=True
+            FC=gfortran-14
+
+          # Windows Configuration
+          CIBW_BEFORE_ALL_WINDOWS: >
+            vcpkg install zlib:x64-windows libpng:x64-windows openjpeg:x64-windows libaec:x64-windows &&
+            curl -L -o v1.8.0.tar.gz https://github.com/NOAA-EMC/NCEPLIBS-g2c/archive/refs/tags/v1.8.0.tar.gz &&
+            tar -xzf v1.8.0.tar.gz &&
+            cd NCEPLIBS-g2c-1.8.0 &&
+            mkdir build && cd build &&
+            cmake -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DUSE_Jasper=OFF -DUSE_OpenJPEG=ON -DBUILD_PNG=ON -DBUILD_AEC=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=C:/g2c .. &&
+            cmake --build . --config Release --target install
+          CIBW_ENVIRONMENT_WINDOWS: >
+            G2C_DIR=C:/g2c
+            GRIB2IO_WITH_IP=False
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl

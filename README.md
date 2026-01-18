@@ -12,6 +12,8 @@
 
 ![Build Linux](https://github.com/NOAA-MDL/grib2io/actions/workflows/build_linux.yml/badge.svg)
 ![Build macOS](https://github.com/NOAA-MDL/grib2io/actions/workflows/build_macos.yml/badge.svg)
+![Build Windows](https://github.com/NOAA-MDL/grib2io/actions/workflows/build_windows.yml/badge.svg)
+![Build IP](https://github.com/NOAA-MDL/grib2io/actions/workflows/build_ip.yml/badge.svg)
 
 ![PyPI](https://img.shields.io/pypi/v/grib2io?label=pypi%20package)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/grib2io)

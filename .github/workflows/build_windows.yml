@@ -1,0 +1,42 @@
+name: Build and Test on Windows
+
+on: [push, pull_request]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies via vcpkg
+        run: |
+          vcpkg install zlib:x64-windows libpng:x64-windows openjpeg:x64-windows libaec:x64-windows
+
+      - name: Build NCEPLIBS-g2c
+        run: |
+          curl -L -o v1.8.0.tar.gz https://github.com/NOAA-EMC/NCEPLIBS-g2c/archive/refs/tags/v1.8.0.tar.gz
+          tar -xzf v1.8.0.tar.gz
+          cd NCEPLIBS-g2c-1.8.0
+          mkdir build
+          cd build
+          cmake -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DUSE_Jasper=OFF -DUSE_OpenJPEG=ON -DBUILD_PNG=ON -DBUILD_AEC=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=C:/g2c ..
+          cmake --build . --config Release --target install
+
+      - name: Install grib2io and test
+        shell: bash
+        run: |
+          export G2C_DIR=C:/g2c
+          export PATH="C:/g2c/bin:$PATH"
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          pip install .
+          python -c "import grib2io; grib2io.show_config()"
+          pytest -m "not interpolation" ./tests/
