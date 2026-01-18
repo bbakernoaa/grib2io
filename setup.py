@@ -158,7 +158,7 @@ def find_library(name,
     required=True
 ):
     """Find absolute path to library file."""
-    _libext_by_platform = {"linux": ".so", "darwin": ".dylib"}
+    _libext_by_platform = {"linux": ".so", "darwin": ".dylib", "win32": ".lib"}
     out = []
 
     # According to the ctypes documentation Mac and Windows ctypes_find_library
@@ -170,12 +170,22 @@ def find_library(name,
         if (sys.platform, platform.machine()) == ("darwin", "arm64"):
             pass
         else:
-            out.append(ctypes_find_library(name))
+            clib = ctypes_find_library(name)
+            if clib is not None:
+                out.append(Path(clib))
 
     # For Linux and macOS (Apple Silicon), we have to search ourselves.
-    libext = _libext_by_platform[sys.platform]
+    libext = _libext_by_platform.get(sys.platform, '.so')
     if static: libext = '.a'
-    if dirs is None:
+
+    if dirs is not None:
+        # If dirs is provided, it takes precedence over ctypes_find_library
+        out = []
+        for d in dirs:
+            libs = Path(d).rglob(f"lib{name}{libext}")
+            out.extend(libs)
+    elif not out:
+        # No dirs provided and ctypes didn't find anything, search defaults
         dirs = []
         # No dirs. First check if in a conda env.
         if os.environ.get("CONDA_PREFIX"):
@@ -189,11 +199,9 @@ def find_library(name,
 
         # Finally, look in common system paths.
         dirs.extend(["/usr", "/usr/local", "/opt/local", "/opt/homebrew", "/opt", "/sw"])
-
-    out = []
-    for d in dirs:
-        libs = Path(d).rglob(f"lib{name}{libext}")
-        out.extend(libs)
+        for d in dirs:
+            libs = Path(d).rglob(f"lib{name}{libext}")
+            out.extend(libs)
     if not out:
         if required:
             raise ValueError(f"""
