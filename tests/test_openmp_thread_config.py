@@ -1,6 +1,8 @@
 import grib2io
 import pytest
 
+pytestmark = pytest.mark.interpolation
+
 def test_iter_messages_read():
     if grib2io.has_interpolation:
         if grib2io.has_openmp_support:

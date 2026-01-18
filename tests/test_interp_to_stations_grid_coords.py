@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+
+pytestmark = pytest.mark.interpolation
 import datetime
 import grib2io
 

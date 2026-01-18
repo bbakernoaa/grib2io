@@ -64,3 +64,8 @@ zip-safe = false
 
 [tool.setuptools.dynamic]
 version = {attr = "grib2io.__config__.grib2io_version"}
+
+[tool.pytest.ini_options]
+markers = [
+    "interpolation: tests that require NCEPLIBS-ip",
+]

@@ -394,9 +394,11 @@ if None in pkginfo:
     warnings.warn(f"NCEPLIBS-ip not found or missing information. grib2io will build without interpolation.")
     build_with_ip = False
 else:
-    # Disable ip library for now to avoid OpenMP issues
-    build_with_ip = False
-    warnings.warn(f"NCEPLIBS-ip found but disabled to avoid OpenMP issues. grib2io will build without interpolation.")
+    if os.environ.get('GRIB2IO_WITH_IP') == 'True':
+        build_with_ip = True
+    else:
+        build_with_ip = False
+        warnings.warn(f"NCEPLIBS-ip found but disabled to avoid OpenMP issues. grib2io will build without interpolation. Set GRIB2IO_WITH_IP='True' to build with interpolation.")
 
 if build_with_ip:
 

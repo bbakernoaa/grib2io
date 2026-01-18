@@ -28,6 +28,7 @@ def test_multi_lead(request):
     da = xr.open_mfdataset([data / 'gfs.t00z.pgrb2.1p00.f009_subset', data / 'gfs.t00z.pgrb2.1p00.f012_subset'], engine='grib2io', filters=filters, combine='nested', concat_dim='leadTime').to_array()
     assert da.shape == (1, 2, 181, 360)
 
+@pytest.mark.interpolation
 def test_interp(request):
     try:
         from grib2io._grib2io import Grib2GridDef
@@ -44,6 +45,7 @@ def test_interp(request):
     except(ModuleNotFoundError):
         pytest.skip()
 
+@pytest.mark.interpolation
 def test_interp_with_openmp_threads(request):
     try:
         from grib2io._grib2io import Grib2GridDef

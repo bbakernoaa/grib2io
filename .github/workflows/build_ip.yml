@@ -1,20 +1,21 @@
-name: Build and Test on Linux
+name: Build and Test with Interpolation (IP)
 
 on: [push, pull_request]
 
 jobs:
-  build-linux:
-    
+  build-ip:
+
     name: py${{ matrix.python-version }}_cc=${{ matrix.ccompiler }}_static=${{ matrix.staticlib }}
     runs-on: ubuntu-latest
     env:
       CC: ${{ matrix.ccompiler }}
+      GRIB2IO_WITH_IP: "True"
     strategy:
       matrix:
         python-version: ["3.8","3.9","3.10","3.11","3.12","3.13","3.14"]
         ccompiler: ["gcc-14"]
         staticlib: ["False"]
-   
+
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -44,9 +45,19 @@ jobs:
         make -j2
         sudo make install
 
+    - name: Install NCEPLIBS-ip
+      run: |
+        wget https://github.com/NOAA-EMC/NCEPLIBS-ip/archive/refs/tags/v5.1.0.tar.gz
+        tar -xzvf v5.1.0.tar.gz
+        cd NCEPLIBS-ip-5.1.0
+        mkdir build && cd build
+        cmake -DOPENMP=ON -DBUILD_SHARED_LIBS=ON -DBLA_VENDOR=OpenBLAS ..
+        make -j2
+        sudo make install
+
     - name: Install grib2io and test
       run: |
         python --version
         USE_STATIC_LIBS=${{ matrix.staticlib }} pip install .
         python -c "import grib2io; grib2io.show_config()"
-        pytest -m "not interpolation" ./tests/
+        pytest -m interpolation ./tests/
