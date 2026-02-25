@@ -1,6 +1,6 @@
-import xarray as xr
-import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+import xarray as xr
 
 
 def plot_static(da: xr.DataArray):
@@ -25,16 +25,16 @@ def plot_static(da: xr.DataArray):
     da.plot(
         ax=ax,
         transform=ccrs.PlateCarree(),
-        x="longitude",
-        y="latitude",
-        cmap="viridis",
+        x='longitude',
+        y='latitude',
+        cmap='viridis',
         robust=True,
     )
 
     ax.coastlines()
     ax.gridlines(draw_labels=True)
 
-    title = f"{da.attrs.get('fullName', da.name)}"
+    title = f'{da.attrs.get("fullName", da.name)}'
     plt.title(title)
 
     return fig
@@ -58,10 +58,10 @@ def plot_interactive(da: xr.DataArray):
 
     # Aero Protocol: rasterize=True for large grids
     return da.hvplot.quadmesh(
-        x="longitude",
-        y="latitude",
+        x='longitude',
+        y='latitude',
         rasterize=True,
         geo=True,
-        tiles="OSM",
-        cmap="viridis",
+        tiles='OSM',
+        cmap='viridis',
     )

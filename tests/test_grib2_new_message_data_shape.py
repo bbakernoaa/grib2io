@@ -1,7 +1,8 @@
-import pytest
 import numpy as np
-import datetime
+import pytest
+
 import grib2io
+
 
 def test_new_message_data_shape(request):
     data = request.config.rootdir / 'tests' / 'input_data' / 'gfs_20221107'
@@ -10,22 +11,17 @@ def test_new_message_data_shape(request):
 
     # Create new message
     newmsg = grib2io.Grib2Message(
-        msg.section0,
-        msg.section1,
-        None,
-        msg.section3,
-        msg.section4,
-        drtn=3)
-
+        msg.section0, msg.section1, None, msg.section3, msg.section4, drtn=3
+    )
 
     # Make some data
     stuff = np.ones((100, 300), dtype=np.float32)
 
-    print(f"{newmsg.shape = }")
-    print(f"{stuff.shape = }")
+    print(f'{newmsg.shape = }')
+    print(f'{stuff.shape = }')
 
     # Test adding stuff to newmsg.
-    with pytest.raises(ValueError, match=r"^Data shape mismatch.*"):
+    with pytest.raises(ValueError, match=r'^Data shape mismatch.*'):
         newmsg.data = stuff
 
 
@@ -57,5 +53,5 @@ def test_new_message_data_shape_no_griddef(request):
     stuff = np.ones((101, 301), dtype=np.float32)
 
     # Test adding stuff to newmsg.
-    with pytest.raises(ValueError, match=r"^Data shape mismatch.*"):
+    with pytest.raises(ValueError, match=r'^Data shape mismatch.*'):
         newmsg.data = stuff

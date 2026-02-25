@@ -3,7 +3,8 @@ Tools for working with Gaussian grids.
 
 Adopted from: https://gist.github.com/ajdawson/b64d24dfac618b91974f
 """
-from __future__ import (absolute_import, division, print_function)
+
+from __future__ import absolute_import, division, print_function
 
 import functools
 
@@ -14,8 +15,8 @@ from numpy.polynomial.legendre import legcompanion, legder, legval
 
 def __single_arg_fast_cache(func):
     """Caching decorator for functions of one argument."""
-    class CachingDict(dict):
 
+    class CachingDict(dict):
         def __missing__(self, key):
             result = self[key] = func(key)
             return result
@@ -60,7 +61,7 @@ def gaussian_latitudes(nlat: int):
     roots -= fx / fpx
     # The roots should exhibit symmetry, but with a sign change, so make sure
     # this is the case:
-    roots = (roots - roots[::-1]) / 2.
+    roots = (roots - roots[::-1]) / 2.0
     # Convert the roots from the interval [-1, 1] to latitude values on the
     # interval [-90, 90] degrees:
     latitudes = np.rad2deg(np.arcsin(roots))

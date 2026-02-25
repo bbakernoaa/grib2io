@@ -5,224 +5,224 @@ import xarray as xr
 
 TESTGRIB = xr.open_mfdataset(
     [
-        "tests/input_data/gfs_20221107/gfs.t00z.pgrb2.1p00.f009_subset",
-        "tests/input_data/gfs_20221107/gfs.t00z.pgrb2.1p00.f012_subset",
+        'tests/input_data/gfs_20221107/gfs.t00z.pgrb2.1p00.f009_subset',
+        'tests/input_data/gfs_20221107/gfs.t00z.pgrb2.1p00.f012_subset',
     ],
-    combine="nested",
-    concat_dim="leadTime",
-    engine="grib2io",
+    combine='nested',
+    concat_dim='leadTime',
+    engine='grib2io',
     filters={
-        "productDefinitionTemplateNumber": 0,
-        "typeOfFirstFixedSurface": 103,
-        "valueOfFirstFixedSurface": 2,
-        "shortName": "TMP",
+        'productDefinitionTemplateNumber': 0,
+        'typeOfFirstFixedSurface': 103,
+        'valueOfFirstFixedSurface': 2,
+        'shortName': 'TMP',
     },
 )
 
-ORIGINAL_ATTRS = TESTGRIB["TMP"].attrs
+ORIGINAL_ATTRS = TESTGRIB['TMP'].attrs
 
 
 @pytest.mark.parametrize(
-    "kwargs, expected_type, expected, error_message",
+    'kwargs, expected_type, expected, error_message',
     [
         pytest.param(
-            {"parameterNumber": 1},
+            {'parameterNumber': 1},
             set,
             {
-                ("shortName", "TMP"),
-                ("shortName", "VTMP"),
-                ("fullName", "Temperature"),
-                ("fullName", "Virtual Temperature"),
+                ('shortName', 'TMP'),
+                ('shortName', 'VTMP'),
+                ('fullName', 'Temperature'),
+                ('fullName', 'Virtual Temperature'),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   1   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   1   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
             },
             None,
-            id="parameterNumber=1",
+            id='parameterNumber=1',
         ),
         pytest.param(
-            {"parameterNumber": 2},
+            {'parameterNumber': 2},
             set,
             {
-                ("shortName", "TMP"),
-                ("shortName", "POT"),
-                ("fullName", "Temperature"),
-                ("fullName", "Potential Temperature"),
+                ('shortName', 'TMP'),
+                ('shortName', 'POT'),
+                ('fullName', 'Temperature'),
+                ('fullName', 'Potential Temperature'),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   2   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   2   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
             },
             None,
-            id="parameterNumber=2",
+            id='parameterNumber=2',
         ),
         pytest.param(
-            {"shortName": "POT"},
+            {'shortName': 'POT'},
             set,
             {
-                ("shortName", "TMP"),
-                ("shortName", "POT"),
-                ("fullName", "Temperature"),
-                ("fullName", "Potential Temperature"),
+                ('shortName', 'TMP'),
+                ('shortName', 'POT'),
+                ('fullName', 'Temperature'),
+                ('fullName', 'Potential Temperature'),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   2   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   2   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
             },
             None,
-            id="shortName=POT",
+            id='shortName=POT',
         ),
         pytest.param(
             {
-                "discipline": 0,
-                "parameterCategory": 0,
-                "parameterNumber": 0,
-                "shortName": "POT",
+                'discipline': 0,
+                'parameterCategory': 0,
+                'parameterNumber': 0,
+                'shortName': 'POT',
             },
             set,
             {
-                ("shortName", "TMP"),
-                ("shortName", "POT"),
-                ("fullName", "Temperature"),
-                ("fullName", "Potential Temperature"),
+                ('shortName', 'TMP'),
+                ('shortName', 'POT'),
+                ('fullName', 'Temperature'),
+                ('fullName', 'Potential Temperature'),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   0   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
                 (
-                    "GRIB2IO_section4",
-                    "[  0   0   0   2   2   0  96   0   0   1   9 103   0   2 255   0   0]",
+                    'GRIB2IO_section4',
+                    '[  0   0   0   2   2   0  96   0   0   1   9 103   0   2 255   0   0]',
                 ),
             },
             None,
-            id="last_wins",
+            id='last_wins',
         ),
         pytest.param(
             {
-                "discipline": 0,
-                "parameterCategory": 0,
-                "parameterNumber": 3,
-                "shortName": "TMP",
+                'discipline': 0,
+                'parameterCategory': 0,
+                'parameterNumber': 3,
+                'shortName': 'TMP',
             },
             set,
             set(),
             None,
-            id="tempest_in_a_teapot",
+            id='tempest_in_a_teapot',
         ),
         pytest.param(
             {
-                "leadTime": 4,
+                'leadTime': 4,
             },  # kwargs
             Warning,  # expected_type
             UserWarning,  # expected
-            "",  # error_message
-            id="warning_dims",
+            '',  # error_message
+            id='warning_dims',
         ),
         pytest.param(
             {
-                "zebra": 4,
+                'zebra': 4,
             },  # kwargs
             Warning,  # expected_type
             UserWarning,  # expected
-            "",  # error_message
-            id="warning_not_found",
+            '',  # error_message
+            id='warning_not_found',
         ),
         pytest.param(
             {
-                "refDate": datetime.datetime(2022, 11, 7, 0, 0),
+                'refDate': datetime.datetime(2022, 11, 7, 0, 0),
             },  # kwargs
             Warning,  # expected_type
             UserWarning,  # expected
-            "", # error message
-            id="refDate",
+            '',  # error message
+            id='refDate',
         ),
         pytest.param(
             {
-                "year": 2021,
+                'year': 2021,
             },  # kwargs
             set,  # expected_type
             {
                 (
-                    "GRIB2IO_section1",
-                    "[   7    0    2    1    1 2022   11    7    0    0    0    0    1]",
+                    'GRIB2IO_section1',
+                    '[   7    0    2    1    1 2022   11    7    0    0    0    0    1]',
                 ),
                 (
-                    "GRIB2IO_section1",
-                    "[   7    0    2    1    1 2021   11    7    0    0    0    0    1]",
+                    'GRIB2IO_section1',
+                    '[   7    0    2    1    1 2021   11    7    0    0    0    0    1]',
                 ),
             },  # expected
             None,
-            id="year",
+            id='year',
         ),
         pytest.param(
             {
-                "month": 10,
+                'month': 10,
             },  # kwargs
             set,  # expected_type
             {
                 (
-                    "GRIB2IO_section1",
-                    "[   7    0    2    1    1 2022   11    7    0    0    0    0    1]",
+                    'GRIB2IO_section1',
+                    '[   7    0    2    1    1 2022   11    7    0    0    0    0    1]',
                 ),
                 (
-                    "GRIB2IO_section1",
-                    "[   7    0    2    1    1 2022   10    7    0    0    0    0    1]",
+                    'GRIB2IO_section1',
+                    '[   7    0    2    1    1 2022   10    7    0    0    0    0    1]',
                 ),
             },  # expected
             None,
-            id="month",
+            id='month',
         ),
         pytest.param(
             {
-                "year": 2021,
-                "month": 2,
-                "day": 29,
+                'year': 2021,
+                'month': 2,
+                'day': 29,
             },  # kwargs
             Exception,  # expected_type
             ValueError,  # expected
-            r"^day is out of range for month|^day 29 must be in range 1\.\.28 for month 2 in year 2021",
-            id="non_leap_year_error",
+            r'^day is out of range for month|^day 29 must be in range 1\.\.28 for month 2 in year 2021',
+            id='non_leap_year_error',
         ),
         pytest.param(
             {
-                "year": 2021,
-                "month": 1,
-                "day": 29,
-                "hour": 25,
+                'year': 2021,
+                'month': 1,
+                'day': 29,
+                'hour': 25,
             },  # kwargs
             Exception,  # expected_type
             ValueError,  # expected
-            r"^hour must be in 0\.\.23(?:, not \d+)?$",
-            id="25_hour_error",
+            r'^hour must be in 0\.\.23(?:, not \d+)?$',
+            id='25_hour_error',
         ),
     ],
 )
 def test_update_attrs(kwargs, expected_type, expected, error_message):
     if issubclass(expected_type, Warning):
         with pytest.warns(expected) as record:
-            result = TESTGRIB["TMP"].grib2io.update_attrs(**kwargs).attrs
+            result = TESTGRIB['TMP'].grib2io.update_attrs(**kwargs).attrs
         if not record:
-            pytest.fail("No warning raised")
+            pytest.fail('No warning raised')
 
     elif issubclass(expected_type, Exception):
-        with pytest.raises(expected, match=error_message) as exc_info:
-            result = TESTGRIB["TMP"].grib2io.update_attrs(**kwargs).attrs
+        with pytest.raises(expected, match=error_message):
+            result = TESTGRIB['TMP'].grib2io.update_attrs(**kwargs).attrs
 
     elif isinstance(expected_type, type):
-        tst = TESTGRIB["TMP"].grib2io.update_attrs(**kwargs).attrs
+        tst = TESTGRIB['TMP'].grib2io.update_attrs(**kwargs).attrs
 
         # Convert all dictionary values to string for set comparison because
         # strings are hashable.
@@ -232,9 +232,9 @@ def test_update_attrs(kwargs, expected_type, expected, error_message):
         # Compare the two dictionaries as sets taking the symmetric difference.
         result = result1.items() ^ result2.items()
 
-        assert isinstance(
-            result, expected_type
-        ), f"Expected result type {expected_type}, got {type(result)}"
+        assert isinstance(result, expected_type), (
+            f'Expected result type {expected_type}, got {type(result)}'
+        )
 
         if expected is not None:
-            assert result == expected, f"Expected {expected}, got {result}"
+            assert result == expected, f'Expected {expected}, got {result}'

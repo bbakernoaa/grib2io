@@ -7,23 +7,23 @@ import grib2io
 
 @pytest.fixture()
 def inp_ds(request):
-    datadir = request.config.rootdir / "tests" / "input_data" / "gfs_20221107"
+    datadir = request.config.rootdir / 'tests' / 'input_data' / 'gfs_20221107'
 
     filters = {
-        "typeOfFirstFixedSurface": 103,
-        "valueOfFirstFixedSurface": 2,
-        "productDefinitionTemplateNumber": 0,
-        "shortName": "TMP",
+        'typeOfFirstFixedSurface': 103,
+        'valueOfFirstFixedSurface': 2,
+        'productDefinitionTemplateNumber': 0,
+        'shortName': 'TMP',
     }
 
     ids = xr.open_mfdataset(
         [
-            datadir / "gfs.t00z.pgrb2.1p00.f009_subset",
-            datadir / "gfs.t00z.pgrb2.1p00.f012_subset",
+            datadir / 'gfs.t00z.pgrb2.1p00.f009_subset',
+            datadir / 'gfs.t00z.pgrb2.1p00.f012_subset',
         ],
-        combine="nested",
-        concat_dim="leadTime",
-        engine="grib2io",
+        combine='nested',
+        concat_dim='leadTime',
+        engine='grib2io',
         filters=filters,
     )
 
@@ -32,14 +32,14 @@ def inp_ds(request):
 
 @pytest.fixture()
 def inp_msgs(request):
-    datadir = request.config.rootdir / "tests" / "input_data" / "gfs_20221107"
+    datadir = request.config.rootdir / 'tests' / 'input_data' / 'gfs_20221107'
 
-    with grib2io.open(datadir / "gfs.t00z.pgrb2.1p00.f012_subset") as imsgs:
+    with grib2io.open(datadir / 'gfs.t00z.pgrb2.1p00.f012_subset') as imsgs:
         yield imsgs
 
 
 @pytest.mark.parametrize(
-    "lats, lons, expected_section3",
+    'lats, lons, expected_section3',
     [
         pytest.param(
             (43, 32.7),
@@ -70,7 +70,7 @@ def inp_msgs(request):
                 1000000,
                 0,
             ],
-            id="subset_1",
+            id='subset_1',
         ),
     ],
 )
@@ -79,8 +79,8 @@ def test_message_subset(inp_msgs, inp_ds, lats, lons, expected_section3):
     newmsg = inp_msgs[0].subset(lats=lats, lons=lons)
     assert_array_equal(newmsg.section3, expected_section3)
 
-    newds = inp_ds["TMP"].grib2io.subset(lats=lats, lons=lons)
-    assert_array_equal(newds.attrs["GRIB2IO_section3"], expected_section3)
+    newds = inp_ds['TMP'].grib2io.subset(lats=lats, lons=lons)
+    assert_array_equal(newds.attrs['GRIB2IO_section3'], expected_section3)
 
     newds = inp_ds.grib2io.subset(lats=lats, lons=lons)
-    assert_array_equal(newds["TMP"].attrs["GRIB2IO_section3"], expected_section3)
+    assert_array_equal(newds['TMP'].attrs['GRIB2IO_section3'], expected_section3)

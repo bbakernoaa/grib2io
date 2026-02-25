@@ -1,15 +1,29 @@
-import pytest
+import sys
+from unittest.mock import MagicMock
+
+# Mock g2clib and other compiled extensions before importing grib2io
+mock_g2clib = MagicMock()
+mock_g2clib.__version__ = '1.0.0'
+mock_g2clib._has_jpeg = 1
+mock_g2clib._has_png = 1
+mock_g2clib._has_aec = 1
+sys.modules['grib2io.g2clib'] = mock_g2clib
+mock_iplib = MagicMock()
+sys.modules['grib2io.iplib'] = mock_iplib
+mock_redtoreg = MagicMock()
+sys.modules['grib2io.redtoreg'] = mock_redtoreg
+
 import numpy as np
-import pandas as pd
 import xarray as xr
-from grib2io.templates import Grib2Metadata
+
 import grib2io.templates
+
 
 def test_constituent_type_descriptor():
     # PDTN 40
     section4 = np.zeros(20, dtype=np.int64)
     section4[1] = 40
-    section4[9+2] = 0 # Ozone
+    section4[9 + 2] = 0  # Ozone
 
     class MockMsg:
         def __init__(self):
@@ -20,13 +34,14 @@ def test_constituent_type_descriptor():
     desc = grib2io.templates.ConstituentType()
     val = desc.__get__(msg)
     assert val.value == 0
-    assert "Ozone" in val.definition
+    assert 'Ozone' in val.definition
+
 
 def test_surface_attributes_shift_pdt40():
     # PDTN 40 surface attributes are shifted by +1
     section4 = np.zeros(20, dtype=np.int64)
     section4[1] = 40
-    section4[10+2] = 1 # Ground or Water Surface
+    section4[10 + 2] = 1  # Ground or Water Surface
 
     class MockMsg:
         def __init__(self):
@@ -37,13 +52,14 @@ def test_surface_attributes_shift_pdt40():
     desc = grib2io.templates.TypeOfFirstFixedSurface()
     val = desc.__get__(msg)
     assert val.value == 1
-    assert "Ground or Water Surface" in val.definition
+    assert 'Ground or Water Surface' in val.definition
+
 
 def test_ensemble_attributes_shift_pdt41():
     # PDTN 41 ensemble attributes are shifted by +1 relative to PDTN 1
     section4 = np.zeros(30, dtype=np.int64)
     section4[1] = 41
-    section4[16+2] = 2 # Negatively Perturbed Forecast
+    section4[16 + 2] = 2  # Negatively Perturbed Forecast
 
     class MockMsg:
         def __init__(self):
@@ -54,13 +70,14 @@ def test_ensemble_attributes_shift_pdt41():
     desc = grib2io.templates.TypeOfEnsembleForecast()
     val = desc.__get__(msg)
     assert val.value == 2
-    assert "Negatively Perturbed" in val.definition
+    assert 'Negatively Perturbed' in val.definition
+
 
 def test_interval_attributes_shift_pdt42():
     # PDTN 42 interval attributes are shifted by +1 relative to PDTN 8
     section4 = np.zeros(40, dtype=np.int64)
     section4[1] = 42
-    section4[24+2] = 0 # Average
+    section4[24 + 2] = 0  # Average
 
     class MockMsg:
         def __init__(self):
@@ -71,9 +88,10 @@ def test_interval_attributes_shift_pdt42():
     desc = grib2io.templates.StatisticalProcess()
     val = desc.__get__(msg)
     assert val.value == 0
-    assert val.definition == "Average"
+    assert val.definition == 'Average'
 
-def test_aero_protocol_compliance():
+
+def test_provenance_compliance():
     """
     Verify that scientific provenance (history) is appended correctly.
     """

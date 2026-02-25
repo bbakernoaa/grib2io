@@ -65,3 +65,13 @@ zip-safe = false
 
 [tool.setuptools.dynamic]
 version = {attr = "grib2io.__config__.grib2io_version"}
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "single"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]

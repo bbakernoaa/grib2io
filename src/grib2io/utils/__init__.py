@@ -11,9 +11,7 @@ from typing import Dict, List, Optional, Tuple, Type, Union
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .. import iplib
-from .. import tables
-from .. import templates
+from .. import iplib, tables, templates
 
 
 def decimal_to_scaled_int(
@@ -45,10 +43,10 @@ def decimal_to_scaled_int(
         ctx.prec = 28
 
         if scale_factor is not None:
-            scaled = dec_value * (10 ** scale_factor)
+            scaled = dec_value * (10**scale_factor)
             if scaled != scaled.to_integral_value():
                 raise ValueError(
-                    f"Value {value} cannot be exactly scaled by 10^{scale_factor}"
+                    f'Value {value} cannot be exactly scaled by 10^{scale_factor}'
                 )
             return scale_factor, int(scaled)
         else:
@@ -58,12 +56,12 @@ def decimal_to_scaled_int(
                 scale_factor += 1
                 if scale_factor > 20:
                     raise ValueError(
-                        f"Could not find exact scale factor for value {value} within bounds."
+                        f'Could not find exact scale factor for value {value} within bounds.'
                     )
             return scale_factor, int(dec_value)
 
 
-def int2bin(i: int, nbits: int=8, output: Union[Type[str], Type[List]]=str):
+def int2bin(i: int, nbits: int = 8, output: Union[Type[str], Type[List]] = str):
     """
     Convert integer to binary string or list
 
@@ -86,9 +84,9 @@ def int2bin(i: int, nbits: int=8, output: Union[Type[str], Type[List]]=str):
         `str` or `list` (list of ints) of binary representation of the integer
         value.
     """
-    i = int(i) if not isinstance(i,int) else i
-    assert nbits in [8,16,32,64]
-    bitstr = "{0:b}".format(i).zfill(nbits)
+    i = int(i) if not isinstance(i, int) else i
+    assert nbits in [8, 16, 32, 64]
+    bitstr = '{0:b}'.format(i).zfill(nbits)
     if output is str:
         return bitstr
     elif output is list:
@@ -109,7 +107,7 @@ def ieee_float_to_int(f):
     ieee_float_to_int
         `numpy.int32` representation of an IEEE 32-bit float.
     """
-    i = struct.unpack('>i',struct.pack('>f',np.float32(f)))[0]
+    i = struct.unpack('>i', struct.pack('>f', np.float32(f)))[0]
     return np.int32(i)
 
 
@@ -127,7 +125,7 @@ def ieee_int_to_float(i):
     ieee_int_to_float
         `numpy.float32` representation of a 32-bit int.
     """
-    f = struct.unpack('>f',struct.pack('>i',np.int32(i)))[0]
+    f = struct.unpack('>f', struct.pack('>i', np.int32(i)))[0]
     return np.float32(f)
 
 
@@ -150,7 +148,9 @@ def get_leadtime(pdtn: int, pdt: ArrayLike) -> datetime.timedelta:
     leadTime
         datetime.timedelta object representing the lead time of the GRIB2 message.
     """
-    lt = tables.get_value_from_table(pdt[templates.UnitOfForecastTime._key[pdtn]], 'scale_time_seconds')
+    lt = tables.get_value_from_table(
+        pdt[templates.UnitOfForecastTime._key[pdtn]], 'scale_time_seconds'
+    )
     lt *= pdt[templates.ValueOfForecastTime._key[pdtn]]
     return datetime.timedelta(seconds=int(lt))
 
@@ -179,9 +179,13 @@ def get_duration(pdtn: int, pdt: ArrayLike) -> datetime.timedelta:
         ntime = pdt[templates.NumberOfTimeRanges._key[pdtn]]
         duration_unit = tables.get_value_from_table(
             pdt[templates.UnitOfTimeRangeOfStatisticalProcess._key[pdtn]],
-            'scale_time_seconds')
-        d = ntime * duration_unit * pdt[
-            templates.TimeRangeOfStatisticalProcess._key[pdtn]]
+            'scale_time_seconds',
+        )
+        d = (
+            ntime
+            * duration_unit
+            * pdt[templates.TimeRangeOfStatisticalProcess._key[pdtn]]
+        )
     else:
         d = 0
     return datetime.timedelta(seconds=int(d))
@@ -209,33 +213,33 @@ def decode_wx_strings(lus: bytes) -> Dict[int, str]:
     assert lus[0] == 1
     # Unpack information related to the simple packing method
     # the packed weather string data.
-    ngroups = struct.unpack('>H',lus[1:3])[0]
-    nvalues = struct.unpack('>i',lus[3:7])[0]
-    refvalue = struct.unpack('>i',lus[7:11])[0]
-    dsf = struct.unpack('>h',lus[11:13])[0]
+    struct.unpack('>H', lus[1:3])[0]
+    struct.unpack('>i', lus[3:7])[0]
+    refvalue = struct.unpack('>i', lus[7:11])[0]
+    dsf = struct.unpack('>h', lus[11:13])[0]
     nbits = lus[13]
     datatype = lus[14]
-    if datatype == 0: # Floating point
-        refvalue = np.float32(ieee_int_to_float(refvalue)*10**-dsf)
-    elif datatype == 1: # Integer
-        refvalue = np.int32(ieee_int_to_float(refvalue)*10**-dsf)
+    if datatype == 0:  # Floating point
+        refvalue = np.float32(ieee_int_to_float(refvalue) * 10**-dsf)
+    elif datatype == 1:  # Integer
+        refvalue = np.int32(ieee_int_to_float(refvalue) * 10**-dsf)
     # Upack each byte starting at byte 15 to end of the local use
     # section, create a binary string and append to the full
     # binary string.
     b = ''
-    for i in range(15,len(lus)):
-        iword = struct.unpack('>B',lus[i:i+1])[0]
+    for i in range(15, len(lus)):
+        iword = struct.unpack('>B', lus[i : i + 1])[0]
         b += bin(iword).split('b')[1].zfill(8)
     # Iterate over the binary string (b). For each nbits
     # chunk, convert to an integer, including the refvalue,
     # and then convert the int to an ASCII character, then
     # concatenate to wxstring.
     wxstring = ''
-    for i in range(0,len(b),nbits):
-        wxstring += chr(int(b[i:i+nbits],2)+refvalue)
+    for i in range(0, len(b), nbits):
+        wxstring += chr(int(b[i : i + nbits], 2) + refvalue)
     # Return string as list, split by null character.
-    #return list(filter(None,wxstring.split('\0')))
-    return {n:k for n,k in enumerate(list(filter(None,wxstring.split('\0'))))}
+    # return list(filter(None,wxstring.split('\0')))
+    return {n: k for n, k in enumerate(list(filter(None, wxstring.split('\0'))))}
 
 
 def get_wgrib2_prob_string(
@@ -271,10 +275,12 @@ def get_wgrib2_prob_string(
         wgrib2-formatted string of probability threshold.
     """
     probstr = ''
-    if sfacl < 0: sfacl = 0
-    if sfacu < 0: sfacu = 0
-    lower = svall/(10**sfacl)
-    upper = svalu/(10**sfacu)
+    if sfacl < 0:
+        sfacl = 0
+    if sfacu < 0:
+        sfacu = 0
+    lower = svall / (10**sfacl)
+    upper = svalu / (10**sfacu)
     if probtype == 0:
         probstr = 'prob <%g' % (lower)
     elif probtype == 1:
@@ -283,7 +289,7 @@ def get_wgrib2_prob_string(
         if lower == upper:
             probstr = 'prob =%g' % (lower)
         else:
-            probstr = 'prob >=%g <%g' % (lower,upper)
+            probstr = 'prob >=%g <%g' % (lower, upper)
     elif probtype == 3:
         probstr = 'prob >%g' % (lower)
     elif probtype == 4:
@@ -298,7 +304,7 @@ def latlon_to_ij(
     gdt,
     lats,
     lons,
-    missing_value = np.nan,
+    missing_value=np.nan,
 ):
     """
     Convert latitude/longitude coordinates to grid (i, j) indices using the
@@ -331,20 +337,20 @@ def latlon_to_ij(
         latitude/longitude points.
     """
     # Check lats and lons
-    if isinstance(lats,list):
+    if isinstance(lats, list):
         nlats = len(lats)
-    elif isinstance(lats,np.ndarray) and len(lats.shape) == 1:
+    elif isinstance(lats, np.ndarray) and len(lats.shape) == 1:
         nlats = lats.shape[0]
     else:
-        raise ValueError("Latitudes must be a list or 1-D NumPy array.")
-    if isinstance(lons,list):
+        raise ValueError('Latitudes must be a list or 1-D NumPy array.')
+    if isinstance(lons, list):
         nlons = len(lons)
-    elif isinstance(lons,np.ndarray) and len(lons.shape) == 1:
+    elif isinstance(lons, np.ndarray) and len(lons.shape) == 1:
         nlons = lons.shape[0]
     else:
-        raise ValueError("Longitudes must be a list or 1-D NumPy array.")
+        raise ValueError('Longitudes must be a list or 1-D NumPy array.')
     if nlats != nlons:
-        raise ValueError("Latitudes and longitudes same length.")
+        raise ValueError('Latitudes and longitudes same length.')
     return iplib.latlon_to_ij(
         gdtn.astype(np.int32),
         gdt.astype(np.int32),
