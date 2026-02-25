@@ -1,67 +1,52 @@
-import xarray as xr
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import xarray as xr
+import hvplot.xarray
 
-
-def plot_static(da: xr.DataArray):
+def plot_aerosol_static(ds: xr.Dataset, var_name: str):
     """
-    Generate a publication-quality static plot using Matplotlib and Cartopy.
-
-    Parameters
-    ----------
-    da : xarray.DataArray
-        The geospatial data to plot. Must have latitude and longitude coordinates.
-
-    Returns
-    -------
-    matplotlib.figure.Figure
-        The generated figure object.
+    Track A: Publication-grade static plot using matplotlib and cartopy.
+    Mandatory: projection in axes and transform in plot calls.
     """
     fig = plt.figure(figsize=(12, 8))
-    # Aero Protocol: Mandatory projection in axes
     ax = plt.axes(projection=ccrs.PlateCarree())
 
-    # Aero Protocol: Mandatory transform in plot calls
-    da.plot(
+    # Add map features
+    ax.add_feature(cfeature.COASTLINE)
+    ax.add_feature(cfeature.BORDERS, linestyle=':')
+
+    # Plot data
+    data = ds[var_name]
+    data.plot(
         ax=ax,
         transform=ccrs.PlateCarree(),
-        x="longitude",
-        y="latitude",
-        cmap="viridis",
-        robust=True,
+        x='longitude',
+        y='latitude',
+        cmap='viridis',
+        cbar_kwargs={'label': data.attrs.get('units', '')}
     )
 
-    ax.coastlines()
-    ax.gridlines(draw_labels=True)
+    plt.title(f"Aerosol Data: {data.attrs.get('long_name', var_name)}")
+    plt.show()
 
-    title = f"{da.attrs.get('fullName', da.name)}"
-    plt.title(title)
-
-    return fig
-
-
-def plot_interactive(da: xr.DataArray):
+def plot_aerosol_interactive(ds: xr.Dataset, var_name: str):
     """
-    Generate an exploratory interactive plot using hvPlot.
-
-    Parameters
-    ----------
-    da : xarray.DataArray
-        The geospatial data to plot.
-
-    Returns
-    -------
-    holoviews.DynamicMap
-        The interactive plot object.
+    Track B: Interactive exploration using hvplot.
+    Mandatory: rasterize=True for large grids.
     """
-    import hvplot.xarray  # noqa
-
-    # Aero Protocol: rasterize=True for large grids
-    return da.hvplot.quadmesh(
-        x="longitude",
-        y="latitude",
+    return ds[var_name].hvplot.quadmesh(
+        x='longitude',
+        y='latitude',
         rasterize=True,
         geo=True,
-        tiles="OSM",
-        cmap="viridis",
+        tiles='EsriImagery',
+        cmap='viridis',
+        title=f"Interactive Aerosol Data: {var_name}"
     )
+
+if __name__ == "__main__":
+    # Example usage
+    # ds = xr.open_dataset("path/to/grib2", engine="grib2io")
+    # plot_aerosol_static(ds, "aod")
+    pass
