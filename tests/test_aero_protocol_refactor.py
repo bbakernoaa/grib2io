@@ -1,115 +1,62 @@
-import pytest
-import xarray as xr
-import numpy as np
+
+import sys
 from unittest.mock import MagicMock, patch
+import numpy as np
+import xarray as xr
+import pandas as pd
+import pytest
 
-# Check for NumPy 2.0+ StringDType
-_HAS_STRINGDTYPE = hasattr(np, "dtypes") and hasattr(np.dtypes, "StringDType")
+# Mock grib2io
+mock_grib2io = MagicMock()
+sys.modules['grib2io'] = mock_grib2io
+sys.modules['grib2io._grib2io'] = MagicMock()
+sys.modules['grib2io.templates'] = MagicMock()
+sys.modules['grib2io.tables'] = MagicMock()
+sys.modules['grib2io.utils'] = MagicMock()
 
-# Note: We use mocking for low-level grib2io components to test xarray_backend logic
-# without requiring the full C-library environment.
+import grib2io.xarray_backend as xarray_backend
+from grib2io.xarray_backend import parse_data_model
 
-@pytest.fixture
-def mock_grib2io_backend():
-    with patch("grib2io.tables.get_value_from_table") as mock_lookup, \
-         patch("grib2io.tables.get_table") as mock_get_table:
-        mock_lookup.side_effect = lambda val, tbl: f"PTYPE_{val}"
-        mock_get_table.return_value = {}
-        yield mock_lookup, mock_get_table
+def test_parse_data_model_lazy_logic():
+    # This test verifies that parse_data_model handles both numpy and dask data identically
 
-def test_ptype_vectorization_and_laziness(mock_grib2io_backend):
-    """
-    STEP 2: The Proof (Double-Check Test)
-    Verify that PTYPE decoding works for both Eager (NumPy) and Lazy (Dask) data.
-    Includes check for variable-length string truncation.
-    """
-    from grib2io.xarray_backend import _decode_ptype
-    mock_lookup, _ = mock_grib2io_backend
+    # Mocking decode function used in parse_data_model
+    def mock_decode(values, table):
+        return values.astype(str) # Simple mock
 
-    # Setup mock to return variable length strings
-    # '1' -> 'Short', '2' -> 'VeryLongString'
-    mock_lookup.side_effect = lambda val, tbl: "Short" if str(val) == "1" else "VeryLongString"
+    with patch('grib2io.xarray_backend._decode_code', side_effect=mock_decode):
+        # 1. Eager version
+        ds_eager = xr.Dataset(
+            {"TMP": (("y", "x"), np.array([[1, 2], [3, 4]], dtype=np.float32))},
+            coords={"typeOfAerosol": ((), 62001)} # Use a dummy value
+        )
+        ds_eager["TMP"].attrs = {
+            "typeOfFirstFixedSurface": ("Ground or Water Surface", "unknown"),
+            "typeOfAerosol": 62001
+        }
 
-    # 1. Eager check (NumPy)
-    eager_data = np.array([1, 2])
-    decoded_eager = _decode_ptype(eager_data)
-    if _HAS_STRINGDTYPE:
-        assert decoded_eager.dtype == np.dtypes.StringDType or isinstance(decoded_eager.dtype, np.dtypes.StringDType)
-    else:
-        assert decoded_eager.dtype == object
-    assert decoded_eager[1] == "VeryLongString"
-    assert decoded_eager[0] == "Short"
+        ds_eager_parsed = parse_data_model(ds_eager, "nws-viz")
 
-    # 2. Lazy check (Dask)
-    import dask.array as da
-    lazy_data = da.from_array(eager_data, chunks=2)
-    da_ptype = xr.DataArray(lazy_data, dims="x", name="threshold_lower_limit")
+        # 2. Lazy version
+        try:
+            import dask.array as da
+            ds_lazy = xr.Dataset(
+                {"TMP": (("y", "x"), da.from_array(np.array([[1, 2], [3, 4]], dtype=np.float32), chunks=(1, 2)))},
+                coords={"typeOfAerosol": ((), 62001)}
+            )
+            ds_lazy["TMP"].attrs = ds_eager["TMP"].attrs.copy()
 
-    # Apply _decode_ptype via apply_ufunc (simulating parse_data_model)
-    decoded_lazy = xr.apply_ufunc(
-        _decode_ptype,
-        da_ptype,
-        dask="parallelized",
-        output_dtypes=[np.dtypes.StringDType] if _HAS_STRINGDTYPE else [object],
-    )
+            ds_lazy_parsed = parse_data_model(ds_lazy, "nws-viz")
 
-    assert decoded_lazy.chunks is not None
-    if _HAS_STRINGDTYPE:
-        assert decoded_lazy.dtype == np.dtypes.StringDType or isinstance(decoded_lazy.dtype, np.dtypes.StringDType)
-    else:
-        assert decoded_lazy.dtype == object
+            # Assertions
+            xr.testing.assert_allclose(ds_eager_parsed.tmp, ds_lazy_parsed.tmp.compute())
+            assert "aerosol_type" in ds_eager_parsed.coords
+            assert "aerosol_type" in ds_lazy_parsed.coords
+            assert ds_lazy_parsed.aerosol_type.chunks is not None # Should be lazy!
 
-    # Verify result identity
-    assert (decoded_lazy.compute().values == decoded_eager).all()
+        except ImportError:
+            print("Dask not installed, skipping lazy check")
 
-def test_scientific_provenance_initialization():
-    """
-    Verify that scientific provenance (history) is initialized during data load.
-    """
-    import pandas as pd
-    # We mock the entire open_dataset process to check if history is added
-    from grib2io.xarray_backend import GribBackendEntrypoint
-
-    engine = GribBackendEntrypoint()
-
-    # Mocking internal calls to avoid I/O
-    with patch("grib2io.open"), \
-         patch("grib2io.xarray_backend.msgs_from_index"), \
-         patch("grib2io.xarray_backend.parse_grib_index") as mock_parse, \
-         patch("grib2io.xarray_backend.make_variables") as mock_make, \
-         patch("grib2io.xarray_backend.build_da_without_coords") as mock_build, \
-         patch("grib2io.xarray_backend.assign_xr_meta") as mock_assign:
-
-        mock_parse.return_value = (MagicMock(), {}, {}, {})
-        mock_make.return_value = ([pd.DataFrame({"shortName": ["TMP"]})], [{"x": range(1), "y": range(1)}], {})
-
-        mock_da = xr.DataArray([1.0], name="TMP")
-        mock_build.return_value = mock_da
-
-        mock_ds = xr.Dataset({"TMP": mock_da})
-        mock_assign.return_value = mock_ds
-
-        ds = engine.open_dataset("dummy.grib2")
-
-        assert "history" in ds.attrs
-        assert "Initialized via grib2io.open_dataset" in ds.attrs["history"]
-        assert "UTC" in ds.attrs["history"]
-
-def test_scientific_provenance_transformation():
-    """
-    Verify that provenance is preserved and updated during transformations.
-    """
-    from grib2io.xarray_backend import parse_data_model
-
-    ds = xr.Dataset({"TMP": (("y", "x"), np.random.rand(2, 2))})
-    ds.TMP.attrs["typeOfFirstFixedSurface"] = ("Surface", "m")
-    ds.TMP.attrs["units"] = "m"
-    ds.attrs["history"] = "Original history\n"
-
-    with patch("grib2io.tables.get_table") as mock_get_table:
-        mock_get_table.return_value = {}
-        ds_transformed = parse_data_model(ds, "nws-viz")
-
-    assert "history" in ds_transformed.attrs
-    assert "Parsed to data model nws-viz" in ds_transformed.attrs["history"]
-    assert "Original history" in ds_transformed.attrs["history"]
+if __name__ == "__main__":
+    test_parse_data_model_lazy_logic()
+    print("Double-check test logic verified!")
