@@ -119,6 +119,7 @@ def _decode_code(values: np.ndarray, table: str) -> np.ndarray:
 AVAILABLE_NON_GEO_COORDS = [
     "duration",
     "leadTime",
+    "validDate",
     "percentileValue",
     "perturbationNumber",
     "refDate",
@@ -138,12 +139,15 @@ AVAILABLE_NON_GEO_COORDS = [
     "scaledValueOfCentralWaveNumber",
     "scaledValueOfFirstSize",
     "scaledValueOfSecondSize",
+    "typeOfIntervalForAerosolSize",
+    "typeOfIntervalForAerosolWavelength",
 ]
 """Available non-geographic coordinate names."""
 
 AVAILABLE_NON_GEO_DIMS = [
     "duration",
     "leadTime",
+    "validDate",
     "percentileValue",
     "perturbationNumber",
     "refDate",
@@ -156,6 +160,12 @@ AVAILABLE_NON_GEO_DIMS = [
     "secondWavelength",
     "firstSizeOfAerosol",
     "secondSizeOfAerosol",
+    "scaled_first_wavelength",
+    "scaled_second_wavelength",
+    "scaled_first_size",
+    "scaled_second_size",
+    "typeOfIntervalForAerosolSize",
+    "typeOfIntervalForAerosolWavelength",
 ]
 """Available non-geographic dimension names."""
 
@@ -247,6 +257,11 @@ def parse_data_model(ds: xr.Dataset, data_model: str) -> xr.Dataset:
         * Percent units normalized from ``"%"`` to ``"percent"`` on coordinates.
         * For precipitation type (``PTYPE``) thresholds, numeric codes are
           decoded to strings (GRIB2 Table 4.201) in relevant attrs/coords.
+        * Aerosol and chemical constituent metadata (e.g., ``aerosol_type``,
+          ``constituent_type``, ``source_sink_indicator``) are decoded
+          to strings using their respective GRIB2 tables.
+        * Wavelength and size coordinates (both absolute and scaled) are
+          standardized and promoted to coordinates if they vary.
 
     Notes
     -----
@@ -393,6 +408,53 @@ def parse_data_model(ds: xr.Dataset, data_model: str) -> xr.Dataset:
                 ds = ds.rename({"secondSizeOfAerosol": "second_size_of_aerosol"})
                 ds["second_size_of_aerosol"].attrs["long_name"] = "Second Size of Aerosol"
                 ds["second_size_of_aerosol"].attrs["units"] = "m"
+
+            elif coord == 'scaledValueOfFirstWavelength':
+                ds = ds.rename({'scaledValueOfFirstWavelength': 'scaled_first_wavelength'})
+                ds['scaled_first_wavelength'].attrs['long_name'] = 'Scaled Value of First Wavelength'
+                ds['scaled_first_wavelength'].attrs['units'] = 'm'
+
+            elif coord == 'scaledValueOfSecondWavelength':
+                ds = ds.rename({'scaledValueOfSecondWavelength': 'scaled_second_wavelength'})
+                ds['scaled_second_wavelength'].attrs['long_name'] = 'Scaled Value of Second Wavelength'
+                ds['scaled_second_wavelength'].attrs['units'] = 'm'
+
+            elif coord == 'scaledValueOfFirstSize':
+                ds = ds.rename({'scaledValueOfFirstSize': 'scaled_first_size'})
+                ds['scaled_first_size'].attrs['long_name'] = 'Scaled Value of First Size'
+                ds['scaled_first_size'].attrs['units'] = 'm'
+
+            elif coord == 'scaledValueOfSecondSize':
+                ds = ds.rename({'scaledValueOfSecondSize': 'scaled_second_size'})
+                ds['scaled_second_size'].attrs['long_name'] = 'Scaled Value of Second Size'
+                ds['scaled_second_size'].attrs['units'] = 'm'
+
+            elif coord == 'typeOfIntervalForAerosolSize':
+                ds = ds.rename({'typeOfIntervalForAerosolSize': 'aerosol_size_interval_type'})
+                ds['aerosol_size_interval_type'].attrs['long_name'] = 'Aerosol Size Interval Type'
+                ds['aerosol_size_interval_type'] = xr.apply_ufunc(
+                    _decode_code,
+                    ds['aerosol_size_interval_type'],
+                    '4.91',
+                    dask='parallelized',
+                    output_dtypes=[np.dtypes.StringDType] if _HAS_STRINGDTYPE else [object],
+                )
+
+            elif coord == 'typeOfIntervalForAerosolWavelength':
+                ds = ds.rename({'typeOfIntervalForAerosolWavelength': 'aerosol_wavelength_interval_type'})
+                ds['aerosol_wavelength_interval_type'].attrs['long_name'] = 'Aerosol Wavelength Interval Type'
+                ds['aerosol_wavelength_interval_type'] = xr.apply_ufunc(
+                    _decode_code,
+                    ds['aerosol_wavelength_interval_type'],
+                    '4.91',
+                    dask='parallelized',
+                    output_dtypes=[np.dtypes.StringDType] if _HAS_STRINGDTYPE else [object],
+                )
+
+            elif coord == 'scaledValueOfCentralWaveNumber':
+                ds = ds.rename({'scaledValueOfCentralWaveNumber': 'scaled_central_wave_number'})
+                ds['scaled_central_wave_number'].attrs['long_name'] = 'Scaled Value of Central Wave Number'
+                ds['scaled_central_wave_number'].attrs['units'] = 'm-1'
 
             # If the dataset has valueOfFirstFixedSurface as a coordinate
             elif coord == "valueOfFirstFixedSurface":
@@ -542,17 +604,11 @@ def parse_data_model(ds: xr.Dataset, data_model: str) -> xr.Dataset:
                 ds[coord].attrs["units"] = "percent"
 
         # Update history for provenance
-        history = ds.attrs.get("history", "")
+        history = ds.attrs.get('history', '')
         now = datetime.datetime.now(datetime.timezone.utc).strftime(
-            "%Y-%m-%d %H:%M:%S UTC"
+            '%Y-%m-%d %H:%M:%S UTC'
         )
-        ds.attrs["history"] = f"{now}: Parsed to data model {data_model}\n{history}"
-
-
-    # Update history for provenance
-    history = ds.attrs.get("history", "")
-    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    ds.attrs["history"] = f"{now}: Normalized to {data_model} data model\n{history}"
+        ds.attrs['history'] = f'{now}: Parsed and normalized to data model {data_model}\n{history}'
 
     return ds
 
@@ -575,6 +631,7 @@ class GribBackendEntrypoint(BackendEntrypoint):
         save_index: bool = True,
         filters: typing.Mapping[str, typing.Any] = dict(),
         data_model: typing.Optional[str] = None,
+        time_axis: str = 'validDate',
     ) -> xr.Dataset:
         """
         Read and parse metadata from grib file.
@@ -592,6 +649,9 @@ class GribBackendEntrypoint(BackendEntrypoint):
             GRIB2 metadata attribute name.
         data_model : str, optional
             Parse GRIB metadata following a defined data model convention.
+        time_axis : str, optional
+            Specify how time dimensions are organized. Options are 'validDate' (default)
+            and 'reference_forecast' (refDate and leadTime).
 
         Returns
         -------
@@ -602,7 +662,9 @@ class GribBackendEntrypoint(BackendEntrypoint):
             file_index = pd.DataFrame(f._index)
             file_index = file_index.assign(msg=msgs_from_index(f._index))
 
-        ds = _open_dataset_from_index(file_index, filename, filters, data_model)
+        ds = _open_dataset_from_index(
+            file_index, filename, filters, data_model, time_axis=time_axis
+        )
 
         # Update history for provenance
         history = ds.attrs.get("history", "")
@@ -1037,6 +1099,7 @@ def filter_index(index, k, v):
 def parse_grib_index(
     index: pd.DataFrame,
     filters: typing.Mapping[str, typing.Any] = dict(),
+    time_axis: str = 'validDate',
 ) -> typing.Tuple[
     pd.DataFrame, typing.Dict[str, typing.List[str]], dict, typing.Dict[str, dict]
 ]:
@@ -1047,20 +1110,25 @@ def parse_grib_index(
 
     Parameters
     ----------
-    index
+    index : pd.DataFrame
         Pandas DataFrame containing the GRIB2 message index.
-    filters
+    filters : dict, optional
         Filter GRIB2 messages to single hypercube. Dict keys can be any
         GRIB2 metadata attribute name.
+    time_axis : str, optional
+        Specify how time dimensions are organized. Options are 'validDate' (default)
+        and 'reference_forecast' (refDate and leadTime).
 
     Returns
     -------
-    index
+    index : pd.DataFrame
         Modified Pandas DataFrame with added GRIB2 metadata columns.
-    dim_coords
+    dim_coords : dict
         List of GRIB2 attributes that will be used for coordinates and/or dimensions.
-    attrs
+    attrs : dict
         Dict of metadata attributes (non-coordinates, non-geo)
+    coord_attrs : dict
+        Dict of coordinate attributes.
     """
 
     # make a copy of filters, remove filters as they are applied
@@ -1132,13 +1200,22 @@ def parse_grib_index(
     # determine which non geo dimensions can be created from data by this point
     # the index is filtered down to a single type for all required_uniques
 
-    # Dim Name     # matching dim_name for using this data as index coordinate
-    dim_coords["refDate"] = ["refDate"]
-    coord_attrs["refDate"] = dict(standard_name="forecast_reference_time")
-    #   dim_coords["refDate"] = ["refDate", "hour"] # non dim name matching items in list are used as non-index coordinates
+    if time_axis == 'validDate':
+        if 'validDate' not in index.columns:
+            index = index.assign(validDate=index.msg.apply(lambda msg: msg.validDate))
+        # Dim Name     # matching dim_name for using this data as index coordinate
+        dim_coords['validDate'] = ['validDate', 'refDate', 'leadTime']
+        coord_attrs['validDate'] = dict(standard_name='time', long_name='time')
+        coord_attrs['refDate'] = dict(standard_name='forecast_reference_time')
+        coord_attrs['leadTime'] = dict(standard_name='forecast_period')
+    else:
+        # Dim Name     # matching dim_name for using this data as index coordinate
+        dim_coords['refDate'] = ['refDate']
+        coord_attrs['refDate'] = dict(standard_name='forecast_reference_time')
+        #   dim_coords["refDate"] = ["refDate", "hour"] # non dim name matching items in list are used as non-index coordinates
 
-    dim_coords["leadTime"] = ["leadTime"]
-    coord_attrs["leadTime"] = dict(standard_name="forecast_period")
+        dim_coords['leadTime'] = ['leadTime']
+        coord_attrs['leadTime'] = dict(standard_name='forecast_period')
 
     if "valueOfFirstFixedSurface" not in index.columns:
         index = index.assign(
@@ -1277,22 +1354,22 @@ def parse_grib_index(
 
     # Logic for Trace Gas and Aerosol dimensions
     if pdtn in {40, 41, 42, 43, 76, 77, 78, 79}:
-        dim_coords["constituentType"] = ["constituentType"]
+        dim_coords['constituentType'] = ['constituentType']
 
     if pdtn in {76, 77, 78, 79}:
-        dim_coords["sourceSinkIndicator"] = ["sourceSinkIndicator"]
+        dim_coords['sourceSinkIndicator'] = ['sourceSinkIndicator']
 
     if pdtn in {44, 45, 46, 47, 48, 49, 50, 80, 81, 82, 83, 84, 85}:
-        dim_coords["typeOfAerosol"] = ["typeOfAerosol"]
+        dim_coords['typeOfAerosol'] = ['typeOfAerosol']
 
-    if pdtn in {80, 81, 82, 83, 84}:
-        dim_coords["sourceSinkIndicator"] = ["sourceSinkIndicator"]
+    if pdtn in {80, 81, 82, 83, 84, 85}:
+        dim_coords['sourceSinkIndicator'] = ['sourceSinkIndicator']
 
-    if pdtn in {48, 49, 80, 81}:
-        dim_coords["firstWavelength"] = ["firstWavelength"]
-        dim_coords["secondWavelength"] = ["secondWavelength"]
-        dim_coords["firstSizeOfAerosol"] = ["firstSizeOfAerosol"]
-        dim_coords["secondSizeOfAerosol"] = ["secondSizeOfAerosol"]
+    if pdtn in {46, 47, 48, 49, 80, 81, 82, 83, 84, 85}:
+        dim_coords['firstWavelength'] = ['firstWavelength']
+        dim_coords['secondWavelength'] = ['secondWavelength']
+        dim_coords['firstSizeOfAerosol'] = ['firstSizeOfAerosol']
+        dim_coords['secondSizeOfAerosol'] = ['secondSizeOfAerosol']
 
     # Finish logic by pdtn
 
@@ -1501,14 +1578,15 @@ def assign_xr_meta(
         ds[coord].attrs.update(attrs)
 
     # assign valid date coords
-    try:
-        ds = ds.assign_coords(
-            dict(validDate=ds.coords["refDate"] + ds.coords["leadTime"])
-        )
-        ds.validDate.attrs["standard_name"] = "time"
-        ds.validDate.attrs["long_name"] = "time"
-    except Exception as e:
-        warnings.warn(f"could not parse validTime: {e}")
+    if 'validDate' not in ds.coords:
+        try:
+            ds = ds.assign_coords(
+                dict(validDate=ds.coords["refDate"] + ds.coords["leadTime"])
+            )
+            ds.validDate.attrs["standard_name"] = "time"
+            ds.validDate.attrs["long_name"] = "time"
+        except Exception as e:
+            warnings.warn(f"could not parse validTime: {e}")
 
     # assign attributes
     ds.attrs["engine"] = "grib2io"
@@ -2341,10 +2419,12 @@ class Grib2ioDataArray:
 def open_mfdataset(
     filenames: typing.Union[str, typing.Sequence[str]],
     *,
+    chunks: typing.Optional[typing.Union[int, typing.Dict[str, int]]] = None,
     drop_variables: typing.Optional[typing.List[str]] = None,
     save_index: bool = True,
     filters: typing.Mapping[str, typing.Any] = dict(),
     data_model: typing.Optional[str] = None,
+    time_axis: str = "validDate",
     parallel: bool = False,
     preprocess: typing.Optional[typing.Callable] = None,
     **kwargs,
@@ -2360,6 +2440,8 @@ def open_mfdataset(
     ----------
     filenames : str or sequence of str
         GRIB2 files to be opened. Can be a glob pattern.
+    chunks : int or dict, optional
+        Dictionary of dimension names and chunk sizes for Dask.
     drop_variables : list of str, optional
         List of variables to exclude from the dataset.
     save_index : bool, optional
@@ -2373,18 +2455,18 @@ def open_mfdataset(
     preprocess : callable, optional
         A function to apply to each file's dataset before combining.
     **kwargs : optional
-        Additional arguments passed to ``xarray.combine_by_coords`` or
-        ``xarray.merge``.
+        Additional arguments passed to ``xarray.combine_by_coords``,
+        ``xarray.combine_nested``, or ``xarray.merge``.
 
     Returns
     -------
     xr.Dataset
         Xarray dataset of grib2 messages.
     """
-    if isinstance(filenames, str):
+    if isinstance(filenames, (str, Path)):
         import glob
 
-        filenames = sorted(glob.glob(filenames))
+        filenames = sorted(glob.glob(str(filenames)))
 
     def _get_index(fname, i):
         with grib2io.open(fname, save_index=save_index, _xarray_backend=True) as f:
@@ -2421,30 +2503,42 @@ def open_mfdataset(
             f"Found grids: {grid_list}"
         )
 
-    if preprocess is not None or kwargs:
+    # Optimization: If no preprocess and no special combination requested,
+    # we can just concatenate the indices and open once.
+    if preprocess is None and not kwargs:
+        file_index = pd.concat(indices, ignore_index=True)
+        ds = _open_dataset_from_index(
+            file_index,
+            list(filenames),
+            filters,
+            data_model,
+            time_axis=time_axis,
+        )
+        if chunks is not None:
+            ds = ds.chunk(chunks)
+    else:
         datasets = [
-            _open_dataset_from_index(idx, fname, filters, data_model)
+            _open_dataset_from_index(idx, fname, filters, data_model, time_axis=time_axis)
             for idx, fname in zip(indices, filenames)
         ]
+
         if preprocess is not None:
             datasets = [preprocess(ds) for ds in datasets]
 
-        if 'combine' in kwargs:
-            combine_opt = kwargs.pop('combine')
-            if combine_opt == 'nested':
-                ds = xr.combine_nested(datasets, **kwargs)
-            elif combine_opt == 'by_coords':
-                ds = xr.combine_by_coords(datasets, **kwargs)
-            else:
-                ds = xr.merge(datasets, **kwargs)
+        combine_opt = kwargs.pop("combine", None)
+        if combine_opt == "nested":
+            ds = xr.combine_nested(datasets, **kwargs)
+        elif combine_opt == "by_coords":
+            ds = xr.combine_by_coords(datasets, **kwargs)
         else:
+            # Default behavior: try combine_by_coords, then fallback to merge
             try:
                 ds = xr.combine_by_coords(datasets, **kwargs)
             except Exception:
                 ds = xr.merge(datasets, **kwargs)
-    else:
-        file_index = pd.concat(indices, ignore_index=True)
-        ds = _open_dataset_from_index(file_index, list(filenames), filters, data_model)
+
+        if chunks is not None:
+            ds = ds.chunk(chunks)
 
     # Update history for provenance
     history = ds.attrs.get("history", "")
@@ -2461,6 +2555,7 @@ def _open_dataset_from_index(
     filenames: typing.Union[str, typing.List[str]],
     filters: typing.Mapping[str, typing.Any] = dict(),
     data_model: typing.Optional[str] = None,
+    time_axis: str = 'validDate',
 ) -> xr.Dataset:
     """
     Create an xarray Dataset from a GRIB2 index DataFrame.
@@ -2475,6 +2570,9 @@ def _open_dataset_from_index(
         Filter GRIB2 messages to single hypercube.
     data_model : str, optional
         Parse GRIB metadata following a defined data model convention.
+    time_axis : str, optional
+        Specify how time dimensions are organized. Options are 'validDate' (default)
+        and 'reference_forecast' (refDate and leadTime).
 
     Returns
     -------
@@ -2485,7 +2583,9 @@ def _open_dataset_from_index(
     # (scalar coord when not dim due to squeeze) parse_grib_index applies
     # filters to index and expands metadata based on product definition
     # template number
-    file_index, dim_coords, attrs, coord_attrs = parse_grib_index(file_index, filters)
+    file_index, dim_coords, attrs, coord_attrs = parse_grib_index(
+        file_index, filters, time_axis=time_axis
+    )
 
     # Divide up records by variable
     frames, cubes, extra_geo = make_variables(
