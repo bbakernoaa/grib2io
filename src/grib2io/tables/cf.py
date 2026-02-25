@@ -114,6 +114,31 @@ table_shortname_to_cf = {
     'WVPER': {'cf_standard_name': 'sea_surface_wind_wave_period', 'cf_cell_methods': None},
     'TOZNE': {'cf_standard_name': 'atmosphere_mole_content_of_ozone', 'cf_cell_methods': None},
     'VIS': {'cf_standard_name': 'visibility_in_air', 'cf_cell_methods': None},
+    'O3MR': {'cf_standard_name': 'mass_fraction_of_ozone_in_air', 'cf_cell_methods': None},
+    'COMR': {
+        'cf_standard_name': 'mass_fraction_of_carbon_monoxide_in_air',
+        'cf_cell_methods': None,
+    },
+    'SO2MR': {
+        'cf_standard_name': 'mass_fraction_of_sulfur_dioxide_in_air',
+        'cf_cell_methods': None,
+    },
+    'NO2MR': {
+        'cf_standard_name': 'mass_fraction_of_nitrogen_dioxide_in_air',
+        'cf_cell_methods': None,
+    },
+    'CH4MR': {
+        'cf_standard_name': 'mass_fraction_of_methane_in_air',
+        'cf_cell_methods': None,
+    },
+    'PMTC': {
+        'cf_standard_name': 'mass_concentration_of_coarse_particulate_matter_in_air',
+        'cf_cell_methods': None,
+    },
+    'PMTF': {
+        'cf_standard_name': 'mass_concentration_of_fine_particulate_matter_in_air',
+        'cf_cell_methods': None,
+    },
 }
 
 # ----------------------------------------------------------------------------------------

@@ -137,6 +137,8 @@ AVAILABLE_NON_GEO_COORDS = [
     "scaledValueOfCentralWaveNumber",
     "scaledValueOfFirstSize",
     "scaledValueOfSecondSize",
+    "sourceSinkIndicator",
+    "typeOfIntervalForAerosolSize",
 ]
 """Available non-geographic coordinate names."""
 
@@ -154,6 +156,8 @@ AVAILABLE_NON_GEO_DIMS = [
     "secondWavelength",
     "firstSizeOfAerosol",
     "secondSizeOfAerosol",
+    "sourceSinkIndicator",
+    "typeOfIntervalForAerosolSize",
 ]
 """Available non-geographic dimension names."""
 
@@ -380,6 +384,32 @@ def parse_data_model(ds: xr.Dataset, data_model: str) -> xr.Dataset:
                 ds = ds.rename({"secondSizeOfAerosol": "second_size_of_aerosol"})
                 ds["second_size_of_aerosol"].attrs["long_name"] = "Second Size of Aerosol"
                 ds["second_size_of_aerosol"].attrs["units"] = "m"
+
+            elif coord == "sourceSinkIndicator":
+                ds = ds.rename({"sourceSinkIndicator": "source_sink_indicator"})
+                ds["source_sink_indicator"].attrs["long_name"] = "Source/Sink Indicator"
+                ds["source_sink_indicator"] = xr.apply_ufunc(
+                    _decode_code,
+                    ds["source_sink_indicator"],
+                    "4.238",
+                    dask="parallelized",
+                    output_dtypes=[np.dtypes.StringDType] if _HAS_STRINGDTYPE else [object],
+                )
+
+            elif coord == "typeOfIntervalForAerosolSize":
+                ds = ds.rename(
+                    {"typeOfIntervalForAerosolSize": "aerosol_size_interval_type"}
+                )
+                ds["aerosol_size_interval_type"].attrs[
+                    "long_name"
+                ] = "Aerosol Size Interval Type"
+                ds["aerosol_size_interval_type"] = xr.apply_ufunc(
+                    _decode_code,
+                    ds["aerosol_size_interval_type"],
+                    "4.91",
+                    dask="parallelized",
+                    output_dtypes=[np.dtypes.StringDType] if _HAS_STRINGDTYPE else [object],
+                )
 
             # If the dataset has valueOfFirstFixedSurface as a coordinate
             elif coord == "valueOfFirstFixedSurface":
@@ -1269,11 +1299,17 @@ def parse_grib_index(
     if pdtn in {44, 45, 46, 47, 48, 49, 50, 80, 81, 82, 83, 84, 85}:
         dim_coords["typeOfAerosol"] = ["typeOfAerosol"]
 
+    if pdtn in {46, 47, 48, 49, 80, 81, 82, 83, 84, 85}:
+        dim_coords["typeOfIntervalForAerosolSize"] = ["typeOfIntervalForAerosolSize"]
+
     if pdtn in {48, 49, 80, 81}:
         dim_coords["firstWavelength"] = ["firstWavelength"]
         dim_coords["secondWavelength"] = ["secondWavelength"]
         dim_coords["firstSizeOfAerosol"] = ["firstSizeOfAerosol"]
         dim_coords["secondSizeOfAerosol"] = ["secondSizeOfAerosol"]
+
+    if pdtn in {80, 81, 82, 83, 84, 85}:
+        dim_coords["sourceSinkIndicator"] = ["sourceSinkIndicator"]
 
     # Finish logic by pdtn
 
@@ -2326,7 +2362,9 @@ def open_mfdataset(
     save_index: bool = True,
     filters: typing.Mapping[str, typing.Any] = dict(),
     data_model: typing.Optional[str] = None,
+    preprocess: typing.Optional[typing.Callable] = None,
     parallel: bool = False,
+    **kwargs,
 ) -> xr.Dataset:
     """
     Open multiple GRIB2 files as a single xarray Dataset.
@@ -2347,8 +2385,13 @@ def open_mfdataset(
         Filter GRIB2 messages to single hypercube.
     data_model : str, optional
         Parse GRIB metadata following a defined data model convention.
+    preprocess : callable, optional
+        If provided, call this function on each dataset prior to combining.
     parallel : bool, optional
         If True, use dask to read indices in parallel.
+    **kwargs : dict, optional
+        Additional keyword arguments passed to ``xarray.combine_by_coords``
+        when ``preprocess`` is used.
 
     Returns
     -------
@@ -2384,11 +2427,11 @@ def open_mfdataset(
     else:
         indices = [_get_index(fname, i) for i, fname in enumerate(filenames)]
 
-    file_index = pd.concat(indices, ignore_index=True)
-
     # Validate grid consistency across files
+    # Check only the first message of each file's index for performance
     grid_cols = ["ny", "nx"]
-    unique_grids = file_index[grid_cols].drop_duplicates()
+    grids = pd.concat([idx[grid_cols].iloc[[0]] for idx in indices])
+    unique_grids = grids.drop_duplicates()
     if len(unique_grids) > 1:
         grid_list = unique_grids.to_dict("records")
         raise ValueError(
@@ -2396,7 +2439,15 @@ def open_mfdataset(
             f"Found grids: {grid_list}"
         )
 
-    ds = _open_dataset_from_index(file_index, list(filenames), filters, data_model)
+    if preprocess is not None:
+        datasets = []
+        for i, fname in enumerate(filenames):
+            ds_file = _open_dataset_from_index(indices[i], [fname], filters, data_model)
+            datasets.append(preprocess(ds_file))
+        ds = xr.combine_by_coords(datasets, **kwargs)
+    else:
+        file_index = pd.concat(indices, ignore_index=True)
+        ds = _open_dataset_from_index(file_index, list(filenames), filters, data_model)
 
     # Update history for provenance
     history = ds.attrs.get("history", "")
