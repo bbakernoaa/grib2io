@@ -255,7 +255,10 @@ class open():
                 self.messages = len(self._msgs)
 
             # Get size for s3fs.core.S3File object.
-            self.size = self._filehandle.info()['size'] or 0
+            try:
+                self.size = self._filehandle.info()['size'] or 0
+            except (AttributeError, TypeError):
+                self.size = getattr(self._filehandle, 'size', 0)
 
         else:
             self.current_message = 0
