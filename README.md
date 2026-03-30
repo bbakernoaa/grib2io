@@ -33,6 +33,23 @@ Optionally (but recommended), grib2io supports spatial interpolation via its int
 > [!IMPORTANT]
 > **Beginning with grib2io v2.4.0, grib2io-interp component package is no longer supported.  Interpolation support is available in grib2io via Cython interface to [NCEPLIBS-ip](https://github.com/NOAA-EMC/NCEPLIBS-ip).**
 
+### Kerchunk & VirtualiZarr Integration
+grib2io natively supports generating [Kerchunk](https://fsspec.github.io/kerchunk/) reference dictionaries to facilitate cloud-optimized virtual dataset workflows without `eccodes` or `cfgrib`. Using `grib2io.kerchunk.scan_grib` combined with `grib2io.kerchunk.grib_tree`, GRIB2 messages can be translated into `zarr` metadata that VirtualiZarr or Xarray's `open_zarr` can ingest using `fsspec` mappings.
+
+```python
+from grib2io.kerchunk import scan_grib, grib_tree
+import fsspec
+import xarray as xr
+
+# Generate metadata references
+refs = scan_grib('gfs.t00z.pgrb2.1p00.f024')
+tree = grib_tree(refs)
+
+# Open seamlessly
+mapper = fsspec.get_mapper('reference://', fo=tree)
+ds = xr.open_zarr(mapper, consolidated=False)
+```
+
 ## Documentation
 * [API documentation](https://noaa-mdl.github.io/grib2io/grib2io.html)
 * [User Guide Jupyter Notebook](https://github.com/NOAA-MDL/grib2io/blob/master/demos/grib2io-v2.ipynb)
