@@ -46,6 +46,31 @@ to these Fortran subroutines via their C-interface.  If NCEPLIBS-ip was built wi
 OpenMP support, `iplib` will provide functions for getting and setting the number of
 OpenMP threads.
 
+Kerchunk & VirtualiZarr
+=======================
+As of v2.7.0, grib2io provides the capability to generate [Kerchunk](https://fsspec.github.io/kerchunk/)
+references directly from GRIB2 files using `grib2io` as the parsing engine. This allows cloud-optimized access
+to GRIB2 datasets without having to rely on `cfgrib` or `eccodes`.
+
+`scan_grib` generates Kerchunk ReferenceFileSystem dictionaries natively:
+```python
+from grib2io.kerchunk import scan_grib
+refs = scan_grib('gfs.t00z.pgrb2.1p00.f024')
+```
+
+`grib_tree` aggregates these message references into a consolidated hierarchical Datatree structure
+that maps naturally to Xarray or VirtualiZarr virtual arrays:
+```python
+from grib2io.kerchunk import grib_tree
+tree = grib_tree(refs)
+
+# Read virtually using fsspec and xarray
+import fsspec
+import xarray as xr
+mapper = fsspec.get_mapper('reference://', fo=tree)
+ds = xr.open_zarr(mapper, consolidated=False)
+```
+
 Xarray Backend
 ==============
 grib2io provides a [Xarray backend engine](./grib2io/xarray_backend.html) so that many GRIB2 messages can be represented
