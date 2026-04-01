@@ -1,7 +1,9 @@
+from kerchunk.combine import MultiZarrToZarr
+from collections import defaultdict
+import ujson
 import base64
 import logging
 from typing import Dict, List
-import json
 
 import fsspec
 import numcodecs
@@ -12,10 +14,12 @@ import grib2io
 
 logger = logging.getLogger("grib2io.kerchunk")
 
+
 class GRIB2IOCodec(numcodecs.abc.Codec):
     """
     Read GRIB stream of bytes as a message using grib2io
     """
+
     codec_id = "grib2io"
 
     def __init__(self, var, dtype=None):
@@ -26,8 +30,7 @@ class GRIB2IOCodec(numcodecs.abc.Codec):
         return buf
 
     def decode(self, buf, out=None):
-        import io
-        with grib2io.open(bytes(buf), mode='r') as f:
+        with grib2io.open(bytes(buf), mode="r") as f:
             msg = f[0]
             if self.var in ["latitude", "longitude"]:
                 lats, lons = msg.latlons()
@@ -42,7 +45,9 @@ class GRIB2IOCodec(numcodecs.abc.Codec):
             else:
                 return data.astype(dt, copy=False)
 
+
 numcodecs.register_codec(GRIB2IOCodec, "grib2io")
+
 
 def _encode_for_JSON(obj):
     if hasattr(obj, "to_bytes") and not isinstance(obj, (int, float, str)):
@@ -59,6 +64,7 @@ def _encode_for_JSON(obj):
         return obj.item()
     return obj
 
+
 def scan_grib(url, storage_options=None, inline_threshold=100, skip=0, filter=None) -> List[Dict]:
     """
     Generate references for a GRIB2 file using grib2io.
@@ -68,12 +74,6 @@ def scan_grib(url, storage_options=None, inline_threshold=100, skip=0, filter=No
 
     out = []
     with fsspec.open(url, "rb", **storage_options) as f:
-        # We need the local file path if f is a local file, or a file-like object
-        try:
-            name = f.path if hasattr(f, 'path') else url
-        except:
-            name = url
-
         # Read file with grib2io
         # Note grib2io.open expects either a physical file or bytes, or file-like
         # We can pass `f` directly if it supports read/seek/tell, which fsspec does.
@@ -104,12 +104,12 @@ def scan_grib(url, storage_options=None, inline_threshold=100, skip=0, filter=No
 
                 # We have a valid message.
                 # Find its offset and size
-                offset = grib_file._index['offset'][i]
-                size = grib_file._index['msgSize'][i]
+                offset = grib_file._index["offset"][i]
+                size = grib_file._index["msgSize"][i]
 
                 # Setup Zarr group for this message
                 store_dict = {}
-                z = zarr.open_group(store=store_dict, mode='w', zarr_format=2)
+                z = zarr.open_group(store=store_dict, mode="w", zarr_format=2)
 
                 # Add attributes
                 attrs = {}
@@ -122,7 +122,7 @@ def scan_grib(url, storage_options=None, inline_threshold=100, skip=0, filter=No
                     elif isinstance(v, (np.generic, int, float, str)):
                         try:
                             attrs[k] = v.item()
-                        except:
+                        except Exception:
                             pass
                     else:
                         attrs[k] = str(v)
@@ -165,7 +165,6 @@ def scan_grib(url, storage_options=None, inline_threshold=100, skip=0, filter=No
 
                 z.attrs["coordinates"] = "latitude longitude"
 
-
                 # Output dictionary
                 # translating references to serializable
                 out_dict = {
@@ -178,17 +177,13 @@ def scan_grib(url, storage_options=None, inline_threshold=100, skip=0, filter=No
     return out
 
 
-
-from kerchunk.combine import MultiZarrToZarr
-from collections import defaultdict
-import ujson
-
 def grib_tree(message_groups: List[Dict], remote_options=None) -> Dict:
     """
     Build a hierarchical data model from a set of scanned grib messages using grib2io conventions.
     """
     zarr_store_dict = {}
     from kerchunk.utils import dict_to_store, translate_refs_serializable
+
     zarr_store = dict_to_store(zarr_store_dict)
     zroot = zarr.open_group(store=zarr_store, zarr_format=2)
 
@@ -201,7 +196,7 @@ def grib_tree(message_groups: List[Dict], remote_options=None) -> Dict:
         gattrs = group["refs"].get(".zattrs", "{}")
         try:
             gattrs = ujson.loads(gattrs) if isinstance(gattrs, (str, bytes)) else gattrs
-        except:
+        except Exception:
             gattrs = {}
 
         # Find the data variable
@@ -218,7 +213,7 @@ def grib_tree(message_groups: List[Dict], remote_options=None) -> Dict:
         dattrs = group["refs"].get(f"{vname}/.zattrs", "{}")
         try:
             dattrs = ujson.loads(dattrs) if isinstance(dattrs, (str, bytes)) else dattrs
-        except:
+        except Exception:
             dattrs = {}
 
         zgroup = zroot.require_group(vname)
@@ -248,9 +243,6 @@ def grib_tree(message_groups: List[Dict], remote_options=None) -> Dict:
             if key not in [".zattrs", ".zgroup"]:
                 zarr_store_dict[f"{path}/{key}"] = value
 
-    zarr_dict = {
-        key: (val.decode() if isinstance(val, bytes) else val)
-        for key, val in zarr_store_dict.items()
-    }
+    zarr_dict = {key: (val.decode() if isinstance(val, bytes) else val) for key, val in zarr_store_dict.items()}
     translate_refs_serializable(zarr_dict)
     return dict(refs=zarr_dict, version=1)
