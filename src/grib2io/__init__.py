@@ -58,5 +58,5 @@ def show_config():
     for lib in extra_objects:
         print(f"\t{lib}")
     print("")
-    from .tables import _ncep_grib2_table_version
+    from .tables.originating_centers import _ncep_grib2_table_version
     print(f"NCEP GRIB2 Table Version: {_ncep_grib2_table_version}")
