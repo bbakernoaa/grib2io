@@ -12,3 +12,6 @@ make_grib2_tables/section*.py
 make_grib2_tables/originating_centers.py
 *.ipynb_checkpoints
 *.grib2ioidx
+NCEPLIBS-g2c-1.7.0/
+NCEPLIBS-ip-3.3.3/
+build_libs/

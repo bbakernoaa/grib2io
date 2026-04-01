@@ -65,3 +65,9 @@ zip-safe = false
 
 [tool.setuptools.dynamic]
 version = {attr = "grib2io.__config__.grib2io_version"}
+
+[tool.ruff]
+line-length = 148
+
+[tool.ruff.lint]
+ignore = ["F403", "F405", "E402", "E741"]
