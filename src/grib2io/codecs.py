@@ -36,10 +36,14 @@ def _ensure_numcodecs():
 # Codec implementation
 # ---------------------------------------------------------------------------
 
-_ensure_numcodecs()
+try:
+    from numcodecs.abc import Codec
+except ImportError:
 
-from numcodecs.abc import Codec  # noqa: E402
-from numcodecs.registry import register_codec  # noqa: E402
+    class Codec:  # type: ignore
+        """Placeholder for numcodecs.abc.Codec."""
+
+        pass
 
 
 class Grib2Codec(Codec):
@@ -217,4 +221,15 @@ class Grib2Codec(Codec):
         return cls(**cfg)
 
 
-register_codec(Grib2Codec)
+def register_codec():
+    """Register the GRIB2 codec with numcodecs."""
+    try:
+        from numcodecs.registry import register_codec as numcodecs_register_codec
+
+        numcodecs_register_codec(Grib2Codec)
+    except ImportError:
+        pass
+
+
+# Automatically register the codec if numcodecs is available.
+register_codec()

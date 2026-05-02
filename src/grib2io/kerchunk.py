@@ -96,8 +96,6 @@ class ReferenceGenerator:
         file_paths: Union[str, List[str]],
         filters: Optional[Dict[str, Any]] = None,
     ):
-        _ensure_numcodecs()
-
         if isinstance(file_paths, (str, os.PathLike)):
             file_paths = [str(file_paths)]
         else:
@@ -121,6 +119,8 @@ class ReferenceGenerator:
             Kerchunk reference spec v1 dict with keys ``"version"`` and
             ``"refs"``.
         """
+        _ensure_numcodecs()
+
         refs: Dict[str, Any] = {}
 
         # .zgroup at root

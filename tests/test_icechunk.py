@@ -105,8 +105,8 @@ class TestIcechunkImportError:
             with pytest.raises(ImportError, match=r"pip install grib2io\[icechunk\]"):
                 _ensure_icechunk()
 
-    def test_icechunk_writer_init_raises_when_icechunk_missing(self):
-        """IcechunkWriter.__init__ raises ImportError when icechunk is
+    def test_icechunk_writer_init_does_not_raise_when_icechunk_missing(self):
+        """IcechunkWriter.__init__ does not raise ImportError when icechunk is
         not installed.
 
         Validates: Requirement 4.5
@@ -114,8 +114,22 @@ class TestIcechunkImportError:
         with patch.dict(sys.modules, {"icechunk": None}):
             from grib2io.icechunk import IcechunkWriter
 
+            # This should not raise
+            writer = IcechunkWriter("/tmp/test_store")
+            assert writer is not None
+
+    def test_icechunk_writer_write_raises_when_icechunk_missing(self):
+        """IcechunkWriter.write raises ImportError when icechunk is
+        not installed.
+
+        Validates: Requirement 4.5
+        """
+        with patch.dict(sys.modules, {"icechunk": None}):
+            from grib2io.icechunk import IcechunkWriter
+
+            writer = IcechunkWriter("/tmp/test_store")
             with pytest.raises(ImportError, match="icechunk is required"):
-                IcechunkWriter("/tmp/test_store")
+                writer.write({"refs": {}})
 
 
 # ===========================================================================

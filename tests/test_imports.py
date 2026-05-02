@@ -96,25 +96,34 @@ class TestKerchunkImportError:
 class TestCodecsImportError:
     """Accessing codecs features without numcodecs installed raises ImportError."""
 
-    def test_codecs_module_import_fails_without_numcodecs(self):
-        """Importing grib2io.codecs fails with ImportError when numcodecs is absent.
+    def test_codecs_module_import_succeeds_without_numcodecs(self):
+        """Importing grib2io.codecs succeeds even when numcodecs is absent.
 
-        The codecs module calls _ensure_numcodecs() at module level, so
-        the entire module import should fail with a clear error message.
+        The codecs module should be importable so that registration can be
+        attempted without failing if the dependency is missing.
         """
         # Remove the cached module so re-import triggers the guard
         saved = sys.modules.pop("grib2io.codecs", None)
         try:
             with mock.patch.dict(sys.modules, {"numcodecs": None}):
-                with pytest.raises(
-                    ImportError,
-                    match=r"pip install grib2io\[kerchunk\]",
-                ):
-                    importlib.import_module("grib2io.codecs")
+                # This should no longer raise ImportError
+                mod = importlib.import_module("grib2io.codecs")
+                assert mod is not None
         finally:
             # Restore the original module
             if saved is not None:
                 sys.modules["grib2io.codecs"] = saved
+
+    def test_codecs_ensure_guard(self):
+        """_ensure_numcodecs in codecs module raises ImportError with install instructions."""
+        with mock.patch.dict(sys.modules, {"numcodecs": None}):
+            from grib2io.codecs import _ensure_numcodecs
+
+            with pytest.raises(
+                ImportError,
+                match=r"pip install grib2io\[kerchunk\]",
+            ):
+                _ensure_numcodecs()
 
 
 class TestIcechunkImportError:

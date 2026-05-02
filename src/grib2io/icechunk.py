@@ -345,8 +345,6 @@ class IcechunkWriter:
         store_path: str,
         storage_config: Optional[Any] = None,
     ):
-        _ensure_icechunk()
-
         self._store_path = store_path
         self._storage_config = storage_config
         self._repo = None
@@ -358,6 +356,7 @@ class IcechunkWriter:
 
     def _get_storage(self):
         """Return an Icechunk ``Storage`` object."""
+        _ensure_icechunk()
         if self._storage_config is not None:
             return self._storage_config
 
@@ -377,6 +376,7 @@ class IcechunkWriter:
             URI prefixes that need to be registered as virtual chunk
             containers.
         """
+        _ensure_icechunk()
         import icechunk
 
         storage = self._get_storage()
