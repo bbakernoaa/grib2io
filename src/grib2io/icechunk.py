@@ -382,10 +382,10 @@ class IcechunkWriter:
         storage = self._get_storage()
 
         # Build repository config with virtual chunk containers
-        config = icechunk.config.RepositoryConfig.default()
+        config = icechunk.RepositoryConfig.default()
         for prefix in virtual_prefixes:
             container_store = self._make_container_store(prefix)
-            config.set_virtual_chunk_container(icechunk.virtual.VirtualChunkContainer(prefix, container_store))
+            config.set_virtual_chunk_container(icechunk.VirtualChunkContainer(prefix, container_store))
 
         # Build authorize_virtual_chunk_access mapping
         # Use None for credentials (will use environment or anonymous)
@@ -429,16 +429,16 @@ class IcechunkWriter:
             # Remove trailing slash for the store path
             if local_path.endswith("/"):
                 local_path = local_path[:-1]
-            return icechunk.storage.local_filesystem_store(local_path)
+            return icechunk.local_filesystem_store(local_path)
         elif prefix.startswith("s3://"):
-            return icechunk.storage.s3_store(region="us-east-1")
+            return icechunk.s3_store(region="us-east-1")
         elif prefix.startswith("gcs://"):
-            return icechunk.storage.gcs_store(opts={})
+            return icechunk.gcs_store(opts={})
         elif prefix.startswith("http://") or prefix.startswith("https://"):
-            return icechunk.storage.http_store(opts={})
+            return icechunk.http_store(opts={})
         else:
             # Default to local filesystem
-            return icechunk.storage.local_filesystem_store(prefix)
+            return icechunk.local_filesystem_store(prefix)
 
     # ------------------------------------------------------------------
     # Public methods
