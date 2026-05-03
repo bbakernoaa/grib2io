@@ -16,7 +16,13 @@ subset of variables to inspect, ensuring Hypothesis generates at least 100
 distinct examples per test even though the file pool is small.
 """
 
+import sys
 import json
+
+try:
+    import fsspec
+except ImportError:
+    fsspec = None
 import os
 from functools import reduce
 from itertools import combinations as _combinations, permutations as _permutations
@@ -33,6 +39,11 @@ except ImportError:
 import pytest
 
 from grib2io.kerchunk import ReferenceGenerator, _file_uri
+
+
+def _is_python_38():
+    return sys.version_info < (3, 9)
+
 
 # ---------------------------------------------------------------------------
 # Test data paths
@@ -657,6 +668,7 @@ def test_json_serialization_round_trip_keys(data):
     suppress_health_check=[HealthCheck.too_slow],
 )
 @given(data=st.data())
+@pytest.mark.skipif(fsspec is None or _is_python_38(), reason="fsspec not supported on Python 3.8")
 def test_json_serialization_round_trip_metadata(data):
     """Property 4: JSON Serialization Round-Trip — Metadata Structural Equivalence
 

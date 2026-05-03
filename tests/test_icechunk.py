@@ -10,6 +10,7 @@ Tests cover:
 Requirements: 4.1, 4.2, 4.3, 4.4, 4.5
 """
 
+import sys
 import json
 import os
 import sys
@@ -17,6 +18,11 @@ import tempfile
 from unittest.mock import patch
 
 import pytest
+
+
+def _is_python_38():
+    return sys.version_info < (3, 9)
+
 
 INPUT_DATA = os.path.join(os.path.dirname(__file__), "input_data")
 

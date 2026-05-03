@@ -9,6 +9,7 @@ Tests cover:
 Requirements: 2.1, 2.2, 2.3, 2.4
 """
 
+import sys
 import json
 import os
 import tempfile
@@ -20,6 +21,11 @@ except ImportError:
 import pytest
 
 from grib2io.kerchunk import ReferenceGenerator
+
+
+def _is_python_38():
+    return sys.version_info < (3, 9)
+
 
 INPUT_DATA = os.path.join(os.path.dirname(__file__), "input_data")
 
@@ -59,7 +65,7 @@ def manifest(gfs_jpeg_path):
 # ===========================================================================
 
 
-@pytest.mark.skipif(fsspec is None, reason="fsspec not installed")
+@pytest.mark.skipif(fsspec is None or _is_python_38(), reason="fsspec not supported on Python 3.8 due to asyncio.to_thread")
 class TestJsonSerialization:
     """Tests for to_json() serialization."""
 

@@ -11,6 +11,11 @@ Tests cover:
 Requirements: 6.1, 6.2, 6.3, 6.4
 """
 
+try:
+    import fsspec
+except ImportError:
+    fsspec = None
+import sys
 import json
 import os
 import tempfile
@@ -24,6 +29,11 @@ from grib2io.xarray_backend import (
     _is_kerchunk_reference,
     _open_from_reference,
 )
+
+
+def _is_python_38():
+    return sys.version_info < (3, 9)
+
 
 INPUT_DATA = os.path.join(os.path.dirname(__file__), "input_data")
 
@@ -197,6 +207,7 @@ class TestImportErrors:
 # ===========================================================================
 
 
+@pytest.mark.skipif(fsspec is None or _is_python_38(), reason="fsspec not supported on Python 3.8")
 class TestReferenceBackedDataset:
     """Tests that reference-backed datasets match direct GRIB2 reads."""
 
