@@ -22,8 +22,14 @@ from functools import reduce
 from itertools import combinations as _combinations, permutations as _permutations
 from operator import mul
 
-from hypothesis import given, settings, HealthCheck, assume
-from hypothesis import strategies as st
+try:
+    from hypothesis import given, settings, HealthCheck, assume
+    from hypothesis import strategies as st
+    HAS_HYPOTHESIS = True
+except ImportError:
+    HAS_HYPOTHESIS = False
+
+import pytest
 
 from grib2io.kerchunk import ReferenceGenerator, _file_uri
 
@@ -199,6 +205,7 @@ for _group in _AVAILABLE_MULTI_FILE_GROUPS:
 # ===========================================================================
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -264,6 +271,7 @@ def test_manifest_structural_validity(data):
     assert dims[-2:] == ["y", "x"], f"{var_name} last two dimensions must be ['y', 'x'], got {dims[-2:]}"
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -320,6 +328,7 @@ def test_manifest_bitmap_codec_config(data):
 # ===========================================================================
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -350,6 +359,7 @@ def test_chunk_key_uniqueness(data):
         assert all(p.isdigit() for p in parts), f"Chunk key {key} does not follow Zarr naming convention"
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -390,6 +400,7 @@ def test_chunk_key_determinism(data):
 # ===========================================================================
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -453,6 +464,7 @@ def test_multidimensional_hierarchy_correctness(data):
 # ===========================================================================
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -514,6 +526,7 @@ def test_multifile_source_correctness(data):
 # ===========================================================================
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -593,6 +606,7 @@ def test_multifile_dimension_concatenation(data):
 # ===========================================================================
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -635,6 +649,7 @@ def test_json_serialization_round_trip_keys(data):
         os.unlink(json_path)
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,

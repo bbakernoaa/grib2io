@@ -223,11 +223,14 @@ class ReferenceGenerator:
             # This mirrors how the xarray backend requires filtering to a
             # single typeOfFirstFixedSurface.
             var_name = str(msg.shortName)
-            type_of_first_fixed_surface = msg.typeOfFirstFixedSurface
-            if hasattr(type_of_first_fixed_surface, "value"):
-                toffs_val = type_of_first_fixed_surface.value
-            else:
-                toffs_val = type_of_first_fixed_surface
+            try:
+                type_of_first_fixed_surface = msg.typeOfFirstFixedSurface
+                if hasattr(type_of_first_fixed_surface, "value"):
+                    toffs_val = type_of_first_fixed_surface.value
+                else:
+                    toffs_val = type_of_first_fixed_surface
+            except (AttributeError, IndexError):
+                toffs_val = 255
 
             # Also include typeOfGeneratingProcess and
             # productDefinitionTemplateNumber to disambiguate further
@@ -238,11 +241,14 @@ class ReferenceGenerator:
             else:
                 pdtn_val = pdtn
 
-            type_of_second_fixed_surface = msg.typeOfSecondFixedSurface
-            if hasattr(type_of_second_fixed_surface, "value"):
-                tosfs_val = type_of_second_fixed_surface.value
-            else:
-                tosfs_val = type_of_second_fixed_surface
+            try:
+                type_of_second_fixed_surface = msg.typeOfSecondFixedSurface
+                if hasattr(type_of_second_fixed_surface, "value"):
+                    tosfs_val = type_of_second_fixed_surface.value
+                else:
+                    tosfs_val = type_of_second_fixed_surface
+            except (AttributeError, IndexError):
+                tosfs_val = 255
 
             # Group key: shortName + surface type + pdtn + second surface type
             group_key = (var_name, int(toffs_val), int(pdtn_val), int(tosfs_val))
@@ -492,14 +498,20 @@ def _build_zattrs(msg, dim_labels: List[str]) -> dict:
         Zarr ``.zattrs`` metadata.
     """
     # Extract typeOfFirstFixedSurface - handle Grib2Metadata objects
-    type_of_first_fixed_surface = msg.typeOfFirstFixedSurface
-    if hasattr(type_of_first_fixed_surface, "value"):
-        type_of_first_fixed_surface = type_of_first_fixed_surface.value
+    try:
+        type_of_first_fixed_surface = msg.typeOfFirstFixedSurface
+        if hasattr(type_of_first_fixed_surface, "value"):
+            type_of_first_fixed_surface = type_of_first_fixed_surface.value
+    except (IndexError, AttributeError, KeyError):
+        type_of_first_fixed_surface = 255
 
     # Extract valueOfFirstFixedSurface
-    value_of_first_fixed_surface = msg.valueOfFirstFixedSurface
-    if hasattr(value_of_first_fixed_surface, "value"):
-        value_of_first_fixed_surface = value_of_first_fixed_surface.value
+    try:
+        value_of_first_fixed_surface = msg.valueOfFirstFixedSurface
+        if hasattr(value_of_first_fixed_surface, "value"):
+            value_of_first_fixed_surface = value_of_first_fixed_surface.value
+    except (IndexError, AttributeError, KeyError):
+        value_of_first_fixed_surface = 0.0
 
     # Extract refDate and leadTime
     ref_date = msg.refDate
@@ -510,11 +522,14 @@ def _build_zattrs(msg, dim_labels: List[str]) -> dict:
     else:
         ref_date = str(ref_date)
 
-    lead_time = msg.leadTime
-    if hasattr(lead_time, "total_seconds"):
-        lead_time = lead_time.total_seconds()
-    else:
-        lead_time = str(lead_time)
+    try:
+        lead_time = msg.leadTime
+        if hasattr(lead_time, "total_seconds"):
+            lead_time = lead_time.total_seconds()
+        else:
+            lead_time = str(lead_time)
+    except (IndexError, AttributeError, KeyError):
+        lead_time = 0.0
 
     return {
         "_ARRAY_DIMENSIONS": dim_labels,
@@ -617,8 +632,14 @@ def _get_dim_value(msg, dim_name: str) -> Any:
     if dim_name == "level":
         # Use the tuple (valueOfFirstFixedSurface, valueOfSecondFixedSurface)
         # as the level identifier, matching xarray_backend logic
-        v1 = msg.valueOfFirstFixedSurface
-        v2 = msg.valueOfSecondFixedSurface
+        try:
+            v1 = msg.valueOfFirstFixedSurface
+        except (IndexError, AttributeError, KeyError):
+            v1 = 0.0
+        try:
+            v2 = msg.valueOfSecondFixedSurface
+        except (IndexError, AttributeError, KeyError):
+            v2 = 0.0
         return (float(v1), float(v2))
     elif dim_name == "refDate":
         rd = msg.refDate
@@ -636,9 +657,12 @@ def _get_dim_value(msg, dim_name: str) -> Any:
             return d.total_seconds()
         return str(d)
     else:
-        val = getattr(msg, dim_name, None)
-        if hasattr(val, "value"):
-            val = val.value
+        try:
+            val = getattr(msg, dim_name, None)
+            if hasattr(val, "value"):
+                val = val.value
+        except (IndexError, AttributeError, KeyError):
+            val = None
         return val
 
 

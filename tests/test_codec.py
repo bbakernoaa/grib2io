@@ -15,7 +15,11 @@ import os
 
 import numpy as np
 import pytest
-from numcodecs.abc import Codec
+
+try:
+    from numcodecs.abc import Codec
+except ImportError:
+    Codec = object
 
 import grib2io._grib2io as _g2io_module
 from grib2io._grib2io import build_index, msgs_from_index, _data
@@ -124,6 +128,7 @@ def _find_first_message_with_drt(filepath, target_drtn):
 # ===========================================================================
 
 
+@pytest.mark.skipif(Codec is object, reason="numcodecs not installed")
 class TestGrib2CodecInterface:
     """Verify Grib2Codec is a proper numcodecs.abc.Codec subclass."""
 
@@ -178,6 +183,7 @@ class TestGrib2CodecInterface:
             codec.encode(b"dummy")
 
 
+@pytest.mark.skipif(Codec is object, reason="numcodecs not installed")
 class TestGrib2CodecConfig:
     """Verify get_config() / from_config() round-trip."""
 
@@ -297,6 +303,7 @@ class TestGrib2CodecConfig:
 # ===========================================================================
 
 
+@pytest.mark.skipif(Codec is object, reason="numcodecs not installed")
 class TestGrib2CodecDRT0:
     """Test simple packing (DRT 0) decoding.
 
@@ -316,6 +323,7 @@ class TestGrib2CodecDRT0:
         assert np.allclose(codec_data, ref_data, equal_nan=True, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.skipif(Codec is object, reason="numcodecs not installed")
 class TestGrib2CodecDRT2_3:
     """Test complex packing (DRT 2/3) decoding.
 
@@ -349,6 +357,7 @@ class TestGrib2CodecDRT2_3:
         assert np.allclose(codec_data, ref_data, equal_nan=True, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.skipif(Codec is object, reason="numcodecs not installed")
 class TestGrib2CodecDRT40:
     """Test JPEG2000 compression (DRT 40) decoding.
 
@@ -368,6 +377,7 @@ class TestGrib2CodecDRT40:
         assert np.allclose(codec_data, ref_data, equal_nan=True, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.skipif(Codec is object, reason="numcodecs not installed")
 class TestGrib2CodecDRT41:
     """Test PNG compression (DRT 41) decoding.
 
@@ -392,6 +402,7 @@ class TestGrib2CodecDRT41:
 # ===========================================================================
 
 
+@pytest.mark.skipif(Codec is object, reason="numcodecs not installed")
 class TestGrib2CodecBitmap:
     """Test bitmap handling using gfs.t00z.pgrb2.1p00.f024 (which contains bitmap messages).
 

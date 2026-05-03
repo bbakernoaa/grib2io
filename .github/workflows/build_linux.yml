@@ -33,6 +33,7 @@ jobs:
         python -m pip install --upgrade setuptools
         python -m pip install --upgrade wheel
         python -m pip install -r requirements.txt
+        python -m pip install fsspec kerchunk numcodecs icechunk hypothesis
 
     - name: Install NCEPLIBS-g2c
       run: |

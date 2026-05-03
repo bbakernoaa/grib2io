@@ -26,8 +26,13 @@ import os
 
 import numpy as np
 import pytest
-from hypothesis import given, settings, HealthCheck, assume
-from hypothesis import strategies as st
+
+try:
+    from hypothesis import given, settings, HealthCheck, assume
+    from hypothesis import strategies as st
+    HAS_HYPOTHESIS = True
+except ImportError:
+    HAS_HYPOTHESIS = False
 
 import grib2io._grib2io as _g2io_module
 from grib2io._grib2io import build_index, msgs_from_index, _data
@@ -186,6 +191,7 @@ catalog_index_strategy = st.sampled_from(range(len(_CATALOG)))
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @settings(
     max_examples=100,
     deadline=None,
@@ -237,6 +243,7 @@ def test_codec_decode_equivalence(idx):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 @pytest.mark.parametrize("drtn", sorted(TARGET_DRTS))
 @settings(
     max_examples=100,

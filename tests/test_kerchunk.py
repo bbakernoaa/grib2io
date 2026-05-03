@@ -13,7 +13,10 @@ import json
 import os
 import tempfile
 
-import fsspec
+try:
+    import fsspec
+except ImportError:
+    fsspec = None
 import pytest
 
 from grib2io.kerchunk import ReferenceGenerator
@@ -56,6 +59,7 @@ def manifest(gfs_jpeg_path):
 # ===========================================================================
 
 
+@pytest.mark.skipif(fsspec is None, reason="fsspec not installed")
 class TestJsonSerialization:
     """Tests for to_json() serialization."""
 
