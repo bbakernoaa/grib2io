@@ -34,7 +34,11 @@ jobs:
         python3 -m pip install --upgrade setuptools
         python3 -m pip install --upgrade wheel
         python3 -m pip install -r requirements.txt
-        python3 -m pip install fsspec kerchunk numcodecs icechunk hypothesis
+        python3 -m pip install fsspec kerchunk numcodecs hypothesis
+        # icechunk requires Python >= 3.11
+        if python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"; then
+          python3 -m pip install icechunk || echo "icechunk not available for this python version"
+        fi
 
     - name: Install grib2io and test
       run: |

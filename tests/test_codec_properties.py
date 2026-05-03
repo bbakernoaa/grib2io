@@ -30,6 +30,7 @@ import pytest
 try:
     from hypothesis import given, settings, HealthCheck, assume
     from hypothesis import strategies as st
+
     HAS_HYPOTHESIS = True
 except ImportError:
     HAS_HYPOTHESIS = False

@@ -33,7 +33,11 @@ jobs:
         python -m pip install --upgrade setuptools
         python -m pip install --upgrade wheel
         python -m pip install -r requirements.txt
-        python -m pip install fsspec kerchunk numcodecs icechunk hypothesis
+        python -m pip install fsspec kerchunk numcodecs hypothesis
+        # icechunk requires Python >= 3.11
+        if python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"; then
+          python -m pip install icechunk || echo "icechunk not available for this python version"
+        fi
 
     - name: Install NCEPLIBS-g2c
       run: |
